@@ -54,7 +54,7 @@
 
             <div class="panel-card">
                 <div class="card-header">
-                    <svg class="icon-sm blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    <svg class="icon-sm cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                     <h3>SOP Knowledge Base</h3>
                 </div>
                 <p class="small-text">Local Chroma Vector DB for grounding drafted documents in official plant SOPs.</p>
@@ -64,7 +64,7 @@
 
             <div class="panel-card">
                 <div class="card-header">
-                    <svg class="icon-sm blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <svg class="icon-sm yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     <h3>Official Deliverables</h3>
                 </div>
                 <div id="deliverablesList" class="deliverables-list">
@@ -76,19 +76,40 @@
         <!-- Main Content Area -->
         <main class="content-area">
 
+            <!-- High-Contrast Metric Cards Grid (Inspired by Reference Design) -->
+            <div class="metric-card-grid">
+                <div class="stat-card">
+                    <div class="accent-shape orange"></div>
+                    <div class="stat-number" id="metricConnCount">0</div>
+                    <div class="stat-label">External Outbound Sockets</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="accent-shape cyan"></div>
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Air-Gapped Local Inference</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="accent-shape yellow"></div>
+                    <div class="stat-number">8 Max</div>
+                    <div class="stat-label">Agent Iteration Safeguard</div>
+                </div>
+            </div>
+
             <!-- Low-Confidence Warning Banner (Hidden by default) -->
-            <div id="lowConfidenceBanner" class="alert-banner warning-banner" style="display: none;">
-                <svg class="icon-md amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div id="lowConfidenceBanner" class="alert-banner" style="display: none;">
+                <svg class="icon-md yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 <div>
-                    <strong>LOW-CONFIDENCE EXTRACTION (&lt;75%) — HUMAN VERIFICATION REQUIRED</strong>
-                    <p class="small-text amber-text">The uploaded scan contained noisy text. Vision Model (Pass 2) was invoked. Please carefully inspect extracted data before sign-off.</p>
+                    <div class="warning-title">LOW-CONFIDENCE EXTRACTION (&lt;75%) — HUMAN VERIFICATION REQUIRED</div>
+                    <p class="small-text">The uploaded scan contained noisy text. Vision Model (Pass 2) was invoked. Please carefully inspect extracted data before sign-off.</p>
                 </div>
             </div>
 
             <!-- Task Input Panel -->
             <section class="panel-card task-panel">
                 <h2>Task & Document Dispatch</h2>
-                <p class="small-text">Upload scanned inspection reports or enter your instructions. Model Router auto-selects the local Ollama model.</p>
+                <p class="small-text" style="margin-bottom: 1rem;">Upload scanned inspection reports or enter your instructions. Model Router auto-selects the local Ollama model.</p>
 
                 <div class="upload-zone" id="uploadZone">
                     <input type="file" id="fileInput" accept="image/*,.pdf,.txt" hidden>
@@ -106,12 +127,13 @@
 
             <!-- Human Review & Approval Panel (Shown when draft is ready) -->
             <section id="humanReviewPanel" class="panel-card review-card" style="display: none;">
-                <div class="review-header">
-                    <svg class="icon-md amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <div>
-                        <h2>HUMAN REVIEW & SIGN-OFF REQUIRED</h2>
-                        <span class="badge amber-badge">AI-DRAFTED DOCUMENT — PENDING APPROVAL</span>
-                    </div>
+                <div class="highlight-user-tag">
+                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <span>HUMAN REVIEW & SIGN-OFF REQUIRED</span>
+                </div>
+
+                <div class="card-header">
+                    <h2>AI-DRAFTED DOCUMENT — PENDING APPROVAL</h2>
                 </div>
 
                 <div class="draft-preview-box" id="draftPreviewBox">
@@ -119,7 +141,7 @@
                 </div>
 
                 <div class="approval-actions">
-                    <button class="btn btn-success" id="btnApproveDraft">Confirm & Finalize Official Deliverable (.docx)</button>
+                    <button class="btn btn-accent-yellow" id="btnApproveDraft">Confirm & Finalize Official Deliverable (.docx)</button>
                 </div>
             </section>
 

@@ -1,4 +1,4 @@
-// Sovereign AI Workbench Frontend Controller — Air-Gapped Government Edition
+// Sovereign AI Workbench Frontend Controller — High-Contrast Dark Theme Edition
 
 let uploadedFileName = null;
 let currentDraftPayload = null;
@@ -29,6 +29,7 @@ async function updateNetworkStatus() {
 
         const statusText = document.getElementById("netStatusText");
         const countBadge = document.getElementById("connCountBadge");
+        const metricConnCount = document.getElementById("metricConnCount");
         const fwVal = document.getElementById("netFirewallVal");
         const socketVal = document.getElementById("outboundSocketVal");
         const lastVal = document.getElementById("lastVerifiedVal");
@@ -41,6 +42,10 @@ async function updateNetworkStatus() {
             statusText.innerText = "WARNING (EGRESS DETECTED)";
             statusText.style.color = "#ef4444";
             countBadge.innerText = `${data.outbound_connection_count} Outbound Connections`;
+        }
+
+        if (metricConnCount) {
+            metricConnCount.innerText = data.outbound_connection_count;
         }
 
         fwVal.innerText = data.firewall_status || "pfctl Active";
@@ -59,16 +64,16 @@ function initFileUpload() {
 
     dropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = "#2563eb";
+        dropZone.style.borderColor = "#facc15";
     });
 
     dropZone.addEventListener("dragleave", () => {
-        dropZone.style.borderColor = "#374151";
+        dropZone.style.borderColor = "rgba(255, 255, 255, 0.14)";
     });
 
     dropZone.addEventListener("drop", (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = "#374151";
+        dropZone.style.borderColor = "rgba(255, 255, 255, 0.14)";
         if (e.dataTransfer.files.length > 0) {
             fileInput.files = e.dataTransfer.files;
             handleUpload(e.dataTransfer.files[0]);
