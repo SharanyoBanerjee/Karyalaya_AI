@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign AI Workbench — Air-Gapped Government & Defence AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header Banner -->
+    <header class="navbar">
+        <div class="brand">
+            <div class="shield-icon">🛡️</div>
+            <div>
+                <h1>SOVEREIGN AI WORKBENCH</h1>
+                <span class="sub-text">Air-Gapped Autonomous Intelligence Platform — Government & Defence</span>
+            </div>
+        </div>
+        <div class="network-badge-box" id="netBadgeBox">
+            <span class="pulse-dot"></span>
+            <span id="netStatusText">SECURE (AIR-GAPPED)</span>
+            <span class="conn-count" id="connCountBadge">0 Egress Connections</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="panel-card">
+                <h3>🔒 Sovereignty Proof</h3>
+                <div class="net-detail-item">
+                    <span class="lbl">Egress Monitor:</span>
+                    <span class="val green" id="netFirewallVal">macOS pfctl Active</span>
+                </div>
+                <div class="net-detail-item">
+                    <span class="lbl">Sandbox Egress:</span>
+                    <span class="val green">Docker (--network none)</span>
+                </div>
+                <div class="net-detail-item">
+                    <span class="lbl">Outbound Sockets:</span>
+                    <span class="val green" id="outboundSocketVal">0 Connections</span>
+                </div>
+                <div class="net-detail-item">
+                    <span class="lbl">Last Verified:</span>
+                    <span class="val" id="lastVerifiedVal">--:--:--</span>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h3>📚 SOP Knowledge Base</h3>
+                <p class="small-text">Local Chroma Vector DB for grounding documents in plant SOPs.</p>
+                <button class="btn btn-secondary" id="btnIngestSop">⚡ Re-ingest Plant SOPs</button>
+                <div id="sopIngestStatus" class="status-msg"></div>
+            </div>
+
+            <div class="panel-card">
+                <h3>📄 Generated Deliverables</h3>
+                <div id="deliverablesList" class="deliverables-list">
+                    <span class="small-text">No deliverables generated yet.</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content-area">
+            <!-- Task Submission Panel -->
+            <section class="panel-card task-panel">
+                <h2>Task & Document Dispatch</h2>
+                <p class="small-text">Upload scanned inspection reports, photos, or prompts. The Model Router automatically selects the local Ollama model.</p>
+                
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.txt" hidden>
+                    <div class="upload-inner" onclick="document.getElementById('fileInput').click()">
+                        <span class="upload-icon">📁</span>
+                        <span id="uploadText">Click or Drag & Drop Scanned Report / Inspection Photo Here</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <textarea id="taskPrompt" placeholder="e.g. Ingest the uploaded inspection scan, check SOP-702 for approval guidelines, draft an official approval note, and export as a .docx deliverable."></textarea>
+                    <button class="btn btn-primary" id="btnRunTask">▶ Execute Agent Task</button>
+                </div>
+            </section>
+
+            <!-- Visible Agent Trace Console -->
+            <section class="panel-card trace-panel">
+                <div class="trace-header">
+                    <h2>Live Agent Trace & Reflection Log</h2>
+                    <span class="badge" id="traceModelBadge">Router Ready</span>
+                </div>
+
+                <div class="trace-console" id="traceConsole">
+                    <div class="trace-entry system">
+                        <span class="timestamp">[SYSTEM READY]</span> Sovereign AI Workbench initialized. All inference strictly local on MacBook M4. Zero cloud connections.
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

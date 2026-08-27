@@ -1,0 +1,26 @@
+# Model Registry Configuration for Air-Gapped Sovereign AI Workbench
+# Maps task types to local Ollama endpoints and model parameters
+
+default_endpoint: "http://localhost:11434"
+
+models:
+  code:
+    name: "qwen2.5-coder:7b"
+    endpoint: "http://localhost:11434"
+    context_window: 8192
+    temperature: 0.1
+    description: "Code generation, script execution, and syntax debugging"
+
+  document:
+    name: "qwen2.5:7b"
+    endpoint: "http://localhost:11434"
+    context_window: 8192
+    temperature: 0.2
+    description: "General reasoning, document drafting, SOP matching, and summary"
+
+  vision:
+    name: "qwen2.5:7b"
+    endpoint: "http://localhost:11434"
+    context_window: 4096
+    temperature: 0.2
+    description: "Multimodal document inspection and scan understanding fallback"

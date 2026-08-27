@@ -1,0 +1,23 @@
+STANDARD OPERATING PROCEDURE (SOP-702)
+GOVERNMENT & DEFENCE MANUFACTURING / REFINERY PLANT DIVISION
+SUBJECT: GUIDELINES FOR DRAFTING INSPECTION APPROVAL NOTES & COMPLIANCE SIGN-OFFS
+
+1. PURPOSE & APPLICABILITY
+1.1 This SOP specifies the mandatory format and required sections for all Plant Equipment Inspection Approval Notes across Refineries, Defence Units, and PSU Power Plants.
+1.2 Any equipment (Valves, Pressure Vessels, Turbines, Pipelines) undergoing quarterly or annual inspection must be documented using an official Approval Note prior to recommissioning.
+
+2. MANDATORY APPROVAL NOTE SECTIONS
+Every generated Approval Note must contain the following 4 sections:
+Section I: Header & Facility Metadata (Ref Number, Facility Unit Name, Inspection Date).
+Section II: Key Inspection Findings (Detailed list of physical observations, pressure tests, gauge readings, and defect statuses).
+Section III: Grounding & SOP Reference (Explicit citation of applicable SOP clauses and compliance threshold validations).
+Section IV: Recommendation & Sign-off Block (Clear recommendation for 6 to 12-month operational authorization, signed by the Chief Inspection Officer).
+
+3. COMPLIANCE & SAFETY THRESHOLDS
+3.1 Pressure Vessels & Valves: Hydrostatic pressure tests must maintain minimum 150 PSI for at least 30 minutes without pressure drop exceeding 0.5%.
+3.2 Surface Corrosion: Surface pitting/wear depth must not exceed 0.8mm. Wear exceeding 1.2mm requires mandatory component replacement before sign-off.
+3.3 Recommissioning Clearance: Operational approval may be granted for a maximum duration of 12 months, subject to annual re-inspection.
+
+4. REJECTION & ESCALATION PROTOCOL
+4.1 If pressure drop during testing exceeds 1.0% or surface wear exceeds 1.2mm, the equipment must be marked 'REJECTED / MAINTENANCE REQUIRED'.
+4.2 Escalation notes must be submitted to the General Manager (Safety & Operations) within 24 hours of inspection failure.
