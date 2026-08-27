@@ -1,6 +1,7 @@
 """
 Multimodal Vision Pipeline & OCR Fallback for Sovereign AI Workbench.
-Reads scanned PDFs, handwritten reports, photos, and diagrams using local Ollama model.
+Reads scanned PDFs, handwritten reports, photos, and diagrams using local vision model (qwen2-vl:7b / llava:7b).
+Surfaces low-confidence extraction warnings for UI display.
 """
 
 import os
@@ -24,25 +25,25 @@ def encode_image_base64(image_path: str) -> str:
 
 def read_scan_vlm(image_path: str) -> Dict[str, Any]:
     """
-    Sends image to local Ollama vision endpoint (llama3.2:latest / qwen2.5:7b).
+    Sends image to local Ollama vision endpoint (qwen2-vl:7b / llava:7b).
     Strictly local, zero external network calls.
     """
     if not os.path.exists(image_path):
         return {"status": "error", "error": f"Image file not found: {image_path}"}
 
-    # Available candidate vision models in local Ollama
-    candidate_models = ["llama3.2:latest", "qwen2.5:7b"]
+    candidate_vision_models = ["qwen2-vl:7b", "llava:7b", "llava", "qwen2-vl"]
     base64_img = encode_image_base64(image_path)
     url = "http://localhost:11434/api/generate"
 
     prompt = (
-        "You are an inspection document reader. Extract text and inspection findings from this document image. "
-        "Summarize key equipment observations, pressure readings, and status."
+        "You are an inspection document reader. Extract all text, numbers, "
+        "equipment IDs, gauge values, pressure readings, and inspection findings from this document image. "
+        "Provide a clean, structured text output."
     )
 
     last_error = ""
 
-    for model_name in candidate_models:
+    for model_name in candidate_vision_models:
         try:
             payload = {
                 "model": model_name,
@@ -65,7 +66,7 @@ def read_scan_vlm(image_path: str) -> Dict[str, Any]:
             last_error = str(e)
             continue
 
-    # Fallback to local text summary prompt if vision array is rejected by model
+    # Text-only fallback if model vision array rejected
     try:
         payload = {
             "model": "qwen2.5:7b",
@@ -89,24 +90,24 @@ def ingest_document_scan(file_path: str) -> Dict[str, Any]:
     """
     Master Multimodal Pipeline:
     1. Tries Pass-1 OCR.
-    2. If confidence >= 0.75, uses OCR result.
-    3. If confidence < 0.75, logs rationale and triggers Pass-2 Vision Model.
+    2. If confidence >= 0.75, returns OCR text.
+    3. If confidence < 0.75, logs warning, flags low_confidence=True, and triggers Pass-2 Vision Model.
     """
     ocr_result = extract_text_ocr(file_path)
 
     if ocr_result["status"] == "success" and not ocr_result["fallback_required"]:
         log_msg = f"[MULTIMODAL] OCR Pass 1 Successful (Confidence: {ocr_result['confidence']})"
-        print(log_msg)
         return {
             "status": "success",
             "extracted_text": ocr_result["extracted_text"],
             "pipeline": "OCR Pass 1 (Tesseract)",
             "confidence": ocr_result["confidence"],
+            "low_confidence_flag": False,
             "log": log_msg
         }
 
     # Pass 2: Vision Model Fallback
-    log_msg = f"[MULTIMODAL] OCR confidence low ({ocr_result.get('confidence', 0.0)} < 0.75). Triggering Vision Language Model (Pass 2)."
+    log_msg = f"[MULTIMODAL WARNING] OCR confidence low ({ocr_result.get('confidence', 0.0)} < 0.75). Triggering Vision Language Model (qwen2-vl:7b)."
     print(log_msg)
 
     vlm_result = read_scan_vlm(file_path)
@@ -115,13 +116,15 @@ def ingest_document_scan(file_path: str) -> Dict[str, Any]:
             "status": "success",
             "extracted_text": vlm_result["extracted_text"],
             "pipeline": f"Vision Model (Pass 2 Fallback: {vlm_result.get('engine')})",
-            "confidence": 0.90,
+            "confidence": round(ocr_result.get('confidence', 0.50), 2),
+            "low_confidence_flag": True,  # Explicitly flag low confidence for UI banner
             "log": log_msg
         }
     else:
         return {
             "status": "error",
             "error": f"Both OCR and VLM passes failed. Error: {vlm_result.get('error')}",
+            "low_confidence_flag": True,
             "log": log_msg
         }
 

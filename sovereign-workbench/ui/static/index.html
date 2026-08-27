@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sovereign AI Workbench — Air-Gapped Government & Defence AI</title>
+    <title>Sovereign AI Workbench — Air-Gapped Government AI</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <!-- Header Banner -->
+    <!-- Header Navigation -->
     <header class="navbar">
         <div class="brand">
-            <div class="shield-icon">🛡️</div>
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
             <div>
                 <h1>SOVEREIGN AI WORKBENCH</h1>
-                <span class="sub-text">Air-Gapped Autonomous Intelligence Platform — Government & Defence</span>
+                <span class="sub-text">Air-Gapped Autonomous Intelligence — Government & Defence</span>
             </div>
         </div>
         <div class="network-badge-box" id="netBadgeBox">
             <span class="pulse-dot"></span>
             <span id="netStatusText">SECURE (AIR-GAPPED)</span>
-            <span class="conn-count" id="connCountBadge">0 Egress Connections</span>
+            <span class="conn-count" id="connCountBadge">0 Outbound Connections</span>
         </div>
     </header>
 
@@ -28,71 +30,109 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="panel-card">
-                <h3>🔒 Sovereignty Proof</h3>
+                <div class="card-header">
+                    <svg class="icon-sm green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <h3>Network Sovereignty Proof</h3>
+                </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Egress Monitor:</span>
+                    <span class="lbl">Firewall Guard:</span>
                     <span class="val green" id="netFirewallVal">macOS pfctl Active</span>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Sandbox Egress:</span>
-                    <span class="val green">Docker (--network none)</span>
+                    <span class="lbl">Docker Sandbox:</span>
+                    <span class="val green">Disabled (--network none)</span>
                 </div>
                 <div class="net-detail-item">
                     <span class="lbl">Outbound Sockets:</span>
                     <span class="val green" id="outboundSocketVal">0 Connections</span>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Last Verified:</span>
+                    <span class="lbl">Last Verification:</span>
                     <span class="val" id="lastVerifiedVal">--:--:--</span>
                 </div>
             </div>
 
             <div class="panel-card">
-                <h3>📚 SOP Knowledge Base</h3>
-                <p class="small-text">Local Chroma Vector DB for grounding documents in plant SOPs.</p>
-                <button class="btn btn-secondary" id="btnIngestSop">⚡ Re-ingest Plant SOPs</button>
+                <div class="card-header">
+                    <svg class="icon-sm blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    <h3>SOP Knowledge Base</h3>
+                </div>
+                <p class="small-text">Local Chroma Vector DB for grounding drafted documents in official plant SOPs.</p>
+                <button class="btn btn-secondary" id="btnIngestSop">Re-ingest Plant SOPs</button>
                 <div id="sopIngestStatus" class="status-msg"></div>
             </div>
 
             <div class="panel-card">
-                <h3>📄 Generated Deliverables</h3>
+                <div class="card-header">
+                    <svg class="icon-sm blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <h3>Official Deliverables</h3>
+                </div>
                 <div id="deliverablesList" class="deliverables-list">
-                    <span class="small-text">No deliverables generated yet.</span>
+                    <span class="small-text">No finalized deliverables yet.</span>
                 </div>
             </div>
         </aside>
 
-        <!-- Content Area -->
+        <!-- Main Content Area -->
         <main class="content-area">
-            <!-- Task Submission Panel -->
+
+            <!-- Low-Confidence Warning Banner (Hidden by default) -->
+            <div id="lowConfidenceBanner" class="alert-banner warning-banner" style="display: none;">
+                <svg class="icon-md amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <strong>LOW-CONFIDENCE EXTRACTION (&lt;75%) — HUMAN VERIFICATION REQUIRED</strong>
+                    <p class="small-text amber-text">The uploaded scan contained noisy text. Vision Model (Pass 2) was invoked. Please carefully inspect extracted data before sign-off.</p>
+                </div>
+            </div>
+
+            <!-- Task Input Panel -->
             <section class="panel-card task-panel">
                 <h2>Task & Document Dispatch</h2>
-                <p class="small-text">Upload scanned inspection reports, photos, or prompts. The Model Router automatically selects the local Ollama model.</p>
-                
+                <p class="small-text">Upload scanned inspection reports or enter your instructions. Model Router auto-selects the local Ollama model.</p>
+
                 <div class="upload-zone" id="uploadZone">
                     <input type="file" id="fileInput" accept="image/*,.pdf,.txt" hidden>
                     <div class="upload-inner" onclick="document.getElementById('fileInput').click()">
-                        <span class="upload-icon">📁</span>
+                        <svg class="upload-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         <span id="uploadText">Click or Drag & Drop Scanned Report / Inspection Photo Here</span>
                     </div>
                 </div>
 
                 <div class="input-group">
-                    <textarea id="taskPrompt" placeholder="e.g. Ingest the uploaded inspection scan, check SOP-702 for approval guidelines, draft an official approval note, and export as a .docx deliverable."></textarea>
-                    <button class="btn btn-primary" id="btnRunTask">▶ Execute Agent Task</button>
+                    <textarea id="taskPrompt" placeholder="e.g. Ingest the uploaded inspection scan, check SOP-702 for approval guidelines, draft an official approval note, and prepare for human review."></textarea>
+                    <button class="btn btn-primary" id="btnRunTask">Execute Agent Task</button>
                 </div>
             </section>
 
-            <!-- Visible Agent Trace Console -->
+            <!-- Human Review & Approval Panel (Shown when draft is ready) -->
+            <section id="humanReviewPanel" class="panel-card review-card" style="display: none;">
+                <div class="review-header">
+                    <svg class="icon-md amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div>
+                        <h2>HUMAN REVIEW & SIGN-OFF REQUIRED</h2>
+                        <span class="badge amber-badge">AI-DRAFTED DOCUMENT — PENDING APPROVAL</span>
+                    </div>
+                </div>
+
+                <div class="draft-preview-box" id="draftPreviewBox">
+                    <!-- Draft content populated dynamically by JavaScript -->
+                </div>
+
+                <div class="approval-actions">
+                    <button class="btn btn-success" id="btnApproveDraft">Confirm & Finalize Official Deliverable (.docx)</button>
+                </div>
+            </section>
+
+            <!-- Visible Agent Execution Trace Console -->
             <section class="panel-card trace-panel">
                 <div class="trace-header">
-                    <h2>Live Agent Trace & Reflection Log</h2>
-                    <span class="badge" id="traceModelBadge">Router Ready</span>
+                    <h2>Live Agent Execution Trace</h2>
+                    <span class="badge gray-badge" id="traceModelBadge">Router Ready</span>
                 </div>
 
                 <div class="trace-console" id="traceConsole">
                     <div class="trace-entry system">
-                        <span class="timestamp">[SYSTEM READY]</span> Sovereign AI Workbench initialized. All inference strictly local on MacBook M4. Zero cloud connections.
+                        <span class="timestamp">[SYSTEM READY]</span> Sovereign AI Workbench initialized. All model inferencing running locally on MacBook M4. Zero outbound connections.
                     </div>
                 </div>
             </section>
