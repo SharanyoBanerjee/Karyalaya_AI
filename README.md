@@ -8,7 +8,7 @@
 
 ---
 
-## 📌 Overview
+## Overview
 
 **Karyalaya AI** is a fully self-hosted, air-gapped agentic AI workbench engineered for high-security environments—including defence manufacturing, oil refineries, nuclear power facilities, and government public sector undertakings (PSUs).
 
@@ -18,7 +18,7 @@ Karyalaya AI delivers a multimodal, tool-using, agentic AI assistant that runs *
 
 ---
 
-## 🌟 Key Capabilities
+## Key Capabilities
 
 1. **100% Sovereign & Air-Gapped**: Runs entirely offline using local open-weight models (served via Ollama / vLLM). No cloud APIs, no external telemetry, and no CDN dependencies.
 2. **Dynamic Task Routing**: Automatically selects the optimal open-weight model for each query (`Qwen2.5-Coder` for scripts, `Qwen2.5-14B/7B` for document reasoning, `Qwen2-VL` for image/scan parsing) via a configuration-driven router (`model_registry.yaml`).
@@ -32,7 +32,7 @@ Karyalaya AI delivers a multimodal, tool-using, agentic AI assistant that runs *
 
 ---
 
-## 🏗 System Architecture
+## System Architecture
 
 ```
                                   ┌────────────────────────┐
@@ -91,7 +91,7 @@ Karyalaya AI delivers a multimodal, tool-using, agentic AI assistant that runs *
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```
 SIH1127_PrototypeMain/
@@ -133,7 +133,7 @@ SIH1127_PrototypeMain/
 
 ---
 
-## ⚡ How It Works
+## How It Works
 
 ### 1. Model Routing
 Incoming user queries are analyzed by `ModelRouter`. The task classification maps to the optimal local model:
@@ -157,7 +157,7 @@ When a task is submitted:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -226,7 +226,7 @@ python3 sovereign-workbench/ui/app.py
 ```
 
 Open your browser and navigate to:
-👉 **`http://localhost:8000`**
+**`http://localhost:8000`**
 
 ---
 
@@ -240,7 +240,7 @@ python3 sovereign-workbench/test_flagship_pipeline.py
 
 ---
 
-## 🖥 User Interface Guide
+## User Interface Guide
 
 The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to eliminate visual fatigue during long monitoring shifts:
 
@@ -253,7 +253,7 @@ The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to 
 
 ---
 
-## 🔒 Security & Air-Gap Compliance
+## Security & Air-Gap Compliance
 
 | Protection Layer | Enforcement Mechanism |
 |---|---|
@@ -265,7 +265,7 @@ The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to 
 
 ---
 
-## 🔮 Roadmap & Future Updates
+## Roadmap & Future Updates
 
 - [x] **Phase 1–8 (v1 Prototype)**: Local Ollama serving, dynamic model router, local ChromaDB RAG, multi-step agent loop, vision model ingestion, DOCX generation, Neumorphic UI, and live egress watchdog.
 - [ ] **Phase 9: Enterprise GPU Cluster Scaling**:
@@ -283,6 +283,6 @@ The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to 
 
 ---
 
-## 📜 License
+## License
 
 Karyalaya AI is distributed under the **MIT License**. All underlying models (Qwen series, Nomic Embed) are subject to their respective open-weight community licenses.
