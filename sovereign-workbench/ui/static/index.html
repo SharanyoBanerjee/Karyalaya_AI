@@ -9,16 +9,16 @@
 </head>
 <body>
 
-    <!-- Navbar -->
+    <!-- Top Navigation -->
     <header class="navbar">
         <div class="brand">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
             <div>
-                <h1>KARYALAYA AI</h1>
-                <span class="sub-text">Air-Gapped Autonomous Intelligence — Government &amp; Defence</span>
+                <h1 class="brand-title">KARYALAYA AI</h1>
+                <span class="brand-sub">Air-Gapped Autonomous Intelligence — Government &amp; Defence</span>
             </div>
         </div>
         <div class="network-badge-box" id="netBadgeBox">
@@ -28,13 +28,13 @@
         </div>
     </header>
 
-    <!-- Three-column layout -->
+    <!-- Three-Column Layout -->
     <div class="main-container" id="mainContainer">
 
-        <!-- LEFT SIDEBAR — always visible -->
+        <!-- LEFT SIDEBAR: Controls, Proofs, Knowledge Base -->
         <aside class="sidebar">
 
-            <!-- Stat cards (compact, stacked) -->
+            <!-- Compact Metrics Grid -->
             <div class="stat-mini-row">
                 <div class="stat-mini-card">
                     <div class="accent-shape orange"></div>
@@ -49,11 +49,11 @@
                 <div class="stat-mini-card">
                     <div class="accent-shape yellow"></div>
                     <div class="stat-mini-number">8 Max</div>
-                    <div class="stat-mini-label">Agent Steps/Turn</div>
+                    <div class="stat-mini-label">Steps / Turn</div>
                 </div>
             </div>
 
-            <!-- Network sovereignty panel -->
+            <!-- Network Sovereignty Card -->
             <div class="panel-card">
                 <div class="card-header">
                     <svg class="icon-sm green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@
                     <h3>Network Sovereignty</h3>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Firewall:</span>
+                    <span class="lbl">Firewall Guard:</span>
                     <span class="val green" id="netFirewallVal">pfctl Active</span>
                 </div>
                 <div class="net-detail-item">
@@ -71,15 +71,15 @@
                 </div>
                 <div class="net-detail-item">
                     <span class="lbl">Outbound Sockets:</span>
-                    <span class="val green" id="outboundSocketVal">0</span>
+                    <span class="val green" id="outboundSocketVal">0 Sockets</span>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Last Check:</span>
-                    <span class="val" id="lastVerifiedVal">--:--</span>
+                    <span class="lbl">Last Verified:</span>
+                    <span class="val" id="lastVerifiedVal">--:--:--</span>
                 </div>
             </div>
 
-            <!-- SOP Knowledge Base -->
+            <!-- Reference Documents (SOP Ingestion) -->
             <div class="panel-card">
                 <div class="card-header">
                     <svg class="icon-sm cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,7 @@
                     </svg>
                     <h3>Reference Documents</h3>
                 </div>
-                <p class="small-text">Add SOPs or reference PDFs to the knowledge base.</p>
+                <p class="small-text">Upload SOPs or reference PDFs to index into local Chroma vector store.</p>
 
                 <div class="upload-zone" id="sopUploadZone">
                     <input type="file" id="sopFileInput" accept=".pdf,.txt,.md" hidden>
@@ -101,11 +101,11 @@
                     </div>
                 </div>
 
-                <button class="btn btn-secondary" id="btnReindex" style="margin-top:0.5rem;">Re-index All SOPs</button>
+                <button class="btn btn-secondary" id="btnReindex">Re-index All SOPs</button>
                 <div id="sopStatus" class="status-msg"></div>
             </div>
 
-            <!-- Official Deliverables -->
+            <!-- Official Deliverables Panel -->
             <div class="panel-card">
                 <div class="card-header">
                     <svg class="icon-sm yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,88 +114,90 @@
                     </svg>
                     <h3>Official Deliverables</h3>
                 </div>
-                <div id="deliverablesList">
+                <div id="deliverablesList" class="deliverables-container">
                     <span class="small-text">No finalized deliverables yet.</span>
                 </div>
             </div>
 
         </aside>
 
-        <!-- CENTER — Chat interface -->
+        <!-- CENTER: Conversational Agent Chat Interface -->
         <main class="chat-area">
 
-            <!-- Low-confidence warning banner -->
-            <div id="lowConfBanner" class="alert-banner" style="display:none; margin: 0.75rem 1.25rem 0;">
-                <svg class="icon-md yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Low-Confidence Warning Banner (Conditional) -->
+            <div id="lowConfBanner" class="alert-banner" style="display:none;">
+                <svg class="icon-sm yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
                 <div>
-                    <div class="warning-title">LOW-CONFIDENCE EXTRACTION — HUMAN VERIFICATION REQUIRED</div>
-                    <p class="small-text">OCR confidence below 75%. Vision model invoked. Verify extracted data carefully before approval.</p>
+                    <div class="warning-title">LOW-CONFIDENCE EXTRACTION (&lt;75%) — HUMAN VERIFICATION REQUIRED</div>
+                    <p class="small-text">The uploaded scan had low visual contrast. Vision language model fallback was invoked. Review extracted data carefully before sign-off.</p>
                 </div>
             </div>
 
-            <!-- Chat message thread -->
+            <!-- Scrollable Chat Thread -->
             <div class="chat-thread" id="chatThread">
                 <div class="chat-message agent">
                     <div class="agent-bubble">
-                        Karyalaya AI is ready. Upload a document or describe your task to begin.
-                        All inference runs locally — zero outbound connections.
+                        Welcome to <strong>Karyalaya AI</strong>. I am your autonomous, air-gapped knowledge assistant. You can upload scanned reports, query plant SOPs, execute data verification scripts in Docker sandbox, or draft inspection notes. All model inference and data processing run 100% locally.
                     </div>
                 </div>
             </div>
 
-            <!-- Task file upload indicator (shown after upload) -->
-            <div id="uploadedFileBar" style="display:none; padding: 0 1.25rem 0.5rem;">
+            <!-- Attached Task File Preview Indicator -->
+            <div id="uploadedFileBar" class="uploaded-file-bar" style="display:none;">
                 <span class="uploaded-file-tag" id="uploadedFileTag">
                     <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                     </svg>
                     <span id="uploadedFileTagText">No file</span>
-                    <button id="btnClearFile" style="background:none;border:none;color:inherit;cursor:pointer;font-size:0.8rem;padding:0 0 0 4px;">x</button>
+                    <button class="btn-clear-file" id="btnClearFile" title="Remove attached file">&times;</button>
                 </span>
             </div>
 
-            <!-- Chat input bar -->
+            <!-- Fixed Bottom Chat Input Bar -->
             <div class="chat-input-bar">
                 <input type="file" id="taskFileInput" accept="image/*,.pdf,.txt" hidden>
-                <button class="btn-icon" id="btnAttachFile" title="Attach scan or document" onclick="document.getElementById('taskFileInput').click()">
+                <button class="btn-icon" id="btnAttachFile" title="Attach Inspection Report or Document" onclick="document.getElementById('taskFileInput').click()">
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                     </svg>
                 </button>
-                <textarea id="chatInput" placeholder="Describe your task or type a question... (Shift+Enter for new line)" rows="1"></textarea>
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input-textarea" id="chatInput" placeholder="Enter task instructions or questions... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                </div>
                 <button class="btn-send" id="btnSend">Send</button>
             </div>
+
         </main>
 
-        <!-- RIGHT PANEL — Draft preview (hidden until DRAFT_READY) -->
+        <!-- RIGHT PANEL: Inline Document Preview & Human Sign-Off (Slides in on DRAFT_READY) -->
         <aside class="draft-panel" id="draftPanel" style="display:none;">
             <div class="draft-panel-header">
                 <div class="draft-panel-title-row">
-                    <h2 style="font-size:0.95rem;font-weight:700;color:var(--white);">AI Draft Document</h2>
+                    <h2 class="draft-panel-title">AI Draft Document</h2>
                     <span class="revision-label" id="revisionLabel">Initial Draft</span>
                 </div>
                 <div class="draft-panel-actions">
                     <button class="btn-approve" id="btnApproveDraft">Confirm &amp; Finalize (.docx)</button>
-                    <a class="btn-download" id="draftDownloadLink" href="#" target="_blank" title="Download draft .docx">
-                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a class="btn-download" id="draftDownloadLink" href="#" target="_blank" title="Download Draft .docx">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>
                     </a>
                 </div>
-                <p class="small-text" style="margin:0;">Review carefully. Type revision feedback in the chat, or click Confirm to finalize.</p>
+                <p class="small-text" style="margin:0;">Review document details. Type revisions in chat or click Confirm to finalize.</p>
             </div>
             <div class="draft-preview-scroll" id="draftPreviewScroll">
-                <!-- draft_payload_to_html() output injected here -->
+                <!-- HTML preview rendered dynamically by app.js -->
             </div>
         </aside>
 
-    </div><!-- /main-container -->
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

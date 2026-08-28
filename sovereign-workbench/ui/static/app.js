@@ -182,7 +182,11 @@ function createAgentMessage(initialText = "") {
 
     const bubble   = document.createElement("div");
     bubble.className = "agent-bubble";
-    if (initialText) bubble.innerText = initialText;
+    if (initialText) {
+        bubble.innerText = initialText;
+    } else {
+        bubble.style.display = "none";
+    }
     wrap.appendChild(bubble);
 
     thread.appendChild(wrap);
@@ -529,9 +533,9 @@ function handleEvent(event, typingWrap, refs) {
 
         case "CLARIFYING_QUESTION":
             ensureAgentWrap();
-            // Render the question as an agent bubble text, then append the inline input
             if (refs.getAgentBubble() && !refs.getBubbleText()) {
                 refs.getAgentBubble().innerText = event.question;
+                refs.getAgentBubble().style.display = "block";
                 refs.setBubbleText(event.question);
             }
             appendClarifyQuestion(refs.getAgentWrap(), event.question);
@@ -547,6 +551,7 @@ function handleEvent(event, typingWrap, refs) {
 
             if (refs.getAgentBubble()) {
                 refs.getAgentBubble().innerText = msg;
+                refs.getAgentBubble().style.display = "block";
                 refs.setBubbleText(msg);
             }
 
@@ -563,6 +568,7 @@ function handleEvent(event, typingWrap, refs) {
             ensureAgentWrap();
             if (refs.getAgentBubble()) {
                 refs.getAgentBubble().innerText = event.content;
+                refs.getAgentBubble().style.display = "block";
                 refs.setBubbleText(event.content);
             }
             break;
@@ -571,6 +577,7 @@ function handleEvent(event, typingWrap, refs) {
             ensureAgentWrap();
             if (refs.getAgentBubble()) {
                 refs.getAgentBubble().innerText = event.content;
+                refs.getAgentBubble().style.display = "block";
                 refs.setBubbleText(event.content);
             }
             break;
