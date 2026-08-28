@@ -10,11 +10,11 @@
 
 ## Overview
 
-**Karyalaya AI** is a fully self-hosted, air-gapped agentic AI workbench engineered for high-security environments—including defence manufacturing, oil refineries, nuclear power facilities, and government public sector undertakings (PSUs).
+**Karyalay AI** is a fully self-hosted, air-gapped agentic AI workbench engineered for high-security environments—including defence manufacturing, oil refineries, nuclear power facilities, and government public sector undertakings (PSUs).
 
 In sovereign and classified operations, routine knowledge tasks (e.g., verifying hydrostatic valve test reports, cross-referencing plant Standard Operating Procedures, executing data verification scripts, and preparing signed approval notes) cannot touch cloud AI due to strict confidentiality mandates. 
 
-Karyalaya AI delivers a multimodal, tool-using, agentic AI assistant that runs **100% locally** on your organization's internal workstation or private GPU server with **zero external telemetry and zero outbound network egress**.
+Karyalay AI delivers a multimodal, tool-using, agentic AI assistant that runs **100% locally** on your organization's internal workstation or private GPU server with **zero external telemetry and zero outbound network egress**.
 
 ---
 
@@ -171,8 +171,8 @@ When a task is submitted:
 ### Step 1: Clone the Repository & Set Up Environment
 
 ```bash
-git clone https://github.com/SharanyoBanerjee/Karyalaya_AI.git
-cd Karyalaya_AI
+git clone https://github.com/SharanyoBanerjee/Karyalay_AI.git
+cd Karyalay_AI
 
 # Create and activate a Python virtual environment
 python3 -m venv venv
@@ -217,7 +217,7 @@ python3 -c "from sovereign_workbench.knowledge_base.ingest_pipeline import inges
 
 ---
 
-### Step 4: Launch the Karyalaya AI Workbench
+### Step 4: Launch the Karyalay AI Workbench
 
 Start the local FastAPI application server:
 
@@ -242,7 +242,7 @@ python3 sovereign-workbench/test_flagship_pipeline.py
 
 ## User Interface Guide
 
-The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to eliminate visual fatigue during long monitoring shifts:
+The Karyalay AI interface is designed with a **Tactile Neumorphic Soft-UI** to eliminate visual fatigue during long monitoring shifts:
 
 | Component | Description |
 |---|---|
@@ -285,4 +285,4 @@ The Karyalaya AI interface is designed with a **Tactile Neumorphic Soft-UI** to 
 
 ## License
 
-Karyalaya AI is distributed under the **MIT License**. All underlying models (Qwen series, Nomic Embed) are subject to their respective open-weight community licenses.
+Karyalay AI is distributed under the **MIT License**. All underlying models (Qwen series, Nomic Embed) are subject to their respective open-weight community licenses.
