@@ -1,5 +1,5 @@
 """
-Document Search (RAG) Tool for Sovereign AI Workbench.
+Document Search (RAG) Tool for Karyalaya AI.
 Queries the local Chroma vector database for grounded SOP & manual information.
 Strictly local retrieval, no cloud embeddings.
 """
@@ -28,17 +28,28 @@ def search_knowledge_base(query: str, top_k: int = 3) -> Dict[str, Any]:
         client = chromadb.PersistentClient(path=VECTOR_DB_DIR)
         
         try:
-            collection = client.get_collection(name="sovereign_sops")
+            collection = client.get_collection(name="karyalaya_sops")
         except Exception:
+            try:
+                collection = client.get_collection(name="sovereign_sops")
+            except Exception:
+                return {
+                    "status": "warning",
+                    "message": "SOP collection not populated yet. Run ingest_pipeline.py.",
+                    "results": []
+                }
+
+        count = collection.count()
+        if count == 0:
             return {
                 "status": "warning",
-                "message": "SOP collection not populated yet. Run ingest_pipeline.py.",
+                "message": "SOP collection is empty.",
                 "results": []
             }
 
         results = collection.query(
             query_texts=[query],
-            n_results=min(top_k, collection.count()) if collection.count() > 0 else 1
+            n_results=min(top_k, count)
         )
 
         matched_docs = []

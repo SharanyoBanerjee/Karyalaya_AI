@@ -1,16 +1,23 @@
 """
-Agent Loop Orchestrator for Sovereign AI Workbench.
-Implements Plan -> Act -> Observe -> Reflect execution loop with tool calling.
-Strictly local, capped at 8 iterations, with transparent UI step logging.
+Agent Loop Orchestrator for Karyalaya AI.
+
+Implements Plan → Act → Observe → Reflect with:
+  - Multi-turn conversation history carried across user messages
+  - Deterministic required-field validation after scan_ingest (triggers CLARIFYING_QUESTION)
+  - Iterative draft revision via revise_draft action
+  - SOP-grounded recommendation advisory
+  - Hard cap of MAX_ITERATIONS per turn (conversation across turns is not capped)
+
+ENFORCEMENT: finalize_official_document is excluded from imports and from _execute_tool.
+             The agent has no code path to that function.
 """
 
 import os
 import sys
 import json
 import re
-from typing import Dict, Any, List, Generator
+from typing import Dict, Any, List, Generator, Optional
 
-# Ensure project root is in sys.path
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -20,24 +27,126 @@ from agent.tools.file_io import read_workspace_file, write_workspace_file, list_
 from agent.tools.code_sandbox import execute_python_code
 from agent.tools.doc_search import search_knowledge_base
 from agent.tools.doc_generator import generate_approval_note
-from agent.tools.spreadsheet import create_excel_report, read_excel_report
+from agent.tools.spreadsheet import create_excel_report
 from ingestion.vlm_reader import ingest_document_scan
 
+# finalize_official_document is deliberately NOT imported here.
+
 MAX_ITERATIONS = 8
+
+# ---------------------------------------------------------------------------
+# Required-field definitions per document type.
+# Each field maps to indicator keywords expected in extracted text.
+# ---------------------------------------------------------------------------
+REQUIRED_FIELDS: Dict[str, Dict[str, List[str]]] = {
+    "approval_note": {
+        "title":           ["title", "subject", "re:", "regarding", "approval note", "inspection note"],
+        "ref_number":      ["ref", "reference no", "ref no", "document no", "file no", "no.", "#"],
+        "plant_unit":      ["unit", "plant", "facility", "station", "section", "site", "area"],
+        "inspection_date": ["date", "inspected on", "inspection date", "dated", "on:"],
+        "findings":        ["finding", "observation", "noted", "issue", "defect", "compliance", "check"],
+    }
+}
+
+CONFIDENCE_THRESHOLD = 0.75
+
+# Human-readable status lines shown in the chat UI for each tool call
+TOOL_STATUS: Dict[str, str] = {
+    "scan_ingest":   "Reading and extracting text from uploaded document...",
+    "doc_search":    "Searching SOP knowledge base for relevant clauses...",
+    "file_read":     "Reading workspace file...",
+    "file_write":    "Saving file to workspace...",
+    "file_list":     "Listing workspace files...",
+    "code_sandbox":  "Running Python code in isolated Docker sandbox...",
+    "doc_generator": "Drafting the document...",
+    "spreadsheet":   "Generating Excel report...",
+    "revise_draft":  "Revising draft based on your feedback...",
+}
+
+# Friendly field names for clarifying question text
+FIELD_FRIENDLY: Dict[str, str] = {
+    "title":           "document title or subject",
+    "ref_number":      "reference or file number",
+    "plant_unit":      "plant or facility unit name",
+    "inspection_date": "inspection date",
+    "findings":        "inspection findings or observations",
+}
+
+
+def check_required_fields(
+    extracted_text: str,
+    confidence: float,
+    doc_type: str = "approval_note",
+) -> List[str]:
+    """
+    Checks extracted text against the required field list for the given document type.
+
+    Returns a list of issue tokens:
+      - "__low_confidence__"  if confidence < CONFIDENCE_THRESHOLD
+      - field name strings    for each required field whose indicator keywords
+                              are absent from the extracted text
+
+    This is deterministic — the LLM is not involved in the trigger decision.
+    """
+    issues: List[str] = []
+
+    if confidence < CONFIDENCE_THRESHOLD:
+        issues.append("__low_confidence__")
+
+    text_lower = extracted_text.lower()
+    for field, keywords in REQUIRED_FIELDS.get(doc_type, {}).items():
+        if not any(kw in text_lower for kw in keywords):
+            issues.append(field)
+
+    return issues
+
+
+def build_clarifying_question(issues: List[str], confidence: float) -> str:
+    """
+    Constructs a specific clarifying question from the detected issue list.
+    Named missing fields and low-confidence flag are listed explicitly.
+    """
+    parts: List[str] = []
+
+    if "__low_confidence__" in issues:
+        pct = int(confidence * 100)
+        parts.append(f"OCR confidence is low ({pct}%) so extracted values may be inaccurate")
+
+    missing_fields = [i for i in issues if i != "__low_confidence__"]
+    for f in missing_fields:
+        parts.append(f"'{FIELD_FRIENDLY.get(f, f)}' could not be found in the document")
+
+    if not parts:
+        return "Some required information could not be extracted from the document. Could you provide more details?"
+
+    issues_text = "; ".join(parts)
+    return (
+        f"Before I proceed, I need to flag some gaps in the uploaded document: {issues_text}. "
+        "Could you confirm or provide the missing information so I can draft an accurate report?"
+    )
+
 
 class AgentOrchestrator:
     def __init__(self):
         self.router = ModelRouter()
 
     def _execute_tool(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Dispatches tool execution to registered tool functions."""
+        """
+        Dispatches a tool call. finalize_official_document is intentionally absent.
+        Adding it here would bypass the human-confirmation enforcement gate.
+        """
         try:
             if tool_name == "doc_search":
-                return search_knowledge_base(query=args.get("query", ""), top_k=args.get("top_k", 3))
+                return search_knowledge_base(
+                    query=args.get("query", ""), top_k=args.get("top_k", 3)
+                )
             elif tool_name == "file_read":
                 return read_workspace_file(file_path=args.get("file_path", ""))
             elif tool_name == "file_write":
-                return write_workspace_file(file_path=args.get("file_path", ""), content=args.get("content", ""))
+                return write_workspace_file(
+                    file_path=args.get("file_path", ""),
+                    content=args.get("content", ""),
+                )
             elif tool_name == "file_list":
                 return list_workspace_files(subfolder=args.get("subfolder", ""))
             elif tool_name == "code_sandbox":
@@ -51,14 +160,14 @@ class AgentOrchestrator:
                     findings=args.get("findings", ["Physical inspection complete"]),
                     sop_reference=args.get("sop_reference", "Per SOP guidelines"),
                     recommendation=args.get("recommendation", "Recommended for approval"),
-                    filename=args.get("filename", "Approval_Note.docx")
+                    filename=args.get("filename", "Approval_Note.docx"),
                 )
             elif tool_name == "spreadsheet":
                 return create_excel_report(
                     sheet_name=args.get("sheet_name", "Sheet1"),
                     headers=args.get("headers", ["ID", "Item", "Status"]),
                     rows=args.get("rows", []),
-                    filename=args.get("filename", "Report.xlsx")
+                    filename=args.get("filename", "Report.xlsx"),
                 )
             elif tool_name == "scan_ingest":
                 return ingest_document_scan(file_path=args.get("file_path", ""))
@@ -67,145 +176,294 @@ class AgentOrchestrator:
         except Exception as e:
             return {"status": "error", "error": f"Tool execution failure: {str(e)}"}
 
-    def run_task(self, user_prompt: str, uploaded_file_path: str = None) -> Generator[Dict[str, Any], None, None]:
+    def _call_revision_llm(
+        self,
+        model_name: str,
+        current_payload: Dict[str, Any],
+        feedback: str,
+    ) -> Dict[str, Any]:
         """
-        Executes the agentic loop. Yields step updates for real-time UI trace streaming.
+        Asks the LLM to update specific draft fields based on human feedback.
+        Merges the response over the existing payload so unmentioned fields are preserved.
+        Falls back to the original payload on any parse failure.
         """
-        # Step 1: Route request
-        task_type, model_cfg, route_log = self.router.classify_request(user_prompt, has_image=bool(uploaded_file_path))
-        
+        prompt = (
+            f"Current draft (JSON):\n{json.dumps(current_payload, indent=2)}\n\n"
+            f"Human reviewer feedback: \"{feedback}\"\n\n"
+            "Return ONLY a JSON object with updated values for the fields the feedback requires changing. "
+            "Keys must be a subset of: title, ref_number, plant_unit, inspection_date, "
+            "findings (list of strings), sop_reference, recommendation, target_filename. "
+            "Do not change fields not mentioned in the feedback. Respond with valid JSON only."
+        )
+        system = (
+            "You update official document draft fields based on human reviewer feedback. "
+            "Return only valid JSON. Preserve all unchanged fields."
+        )
+        try:
+            raw = self.router.generate(
+                model_name=model_name,
+                prompt=prompt,
+                system_prompt=system,
+                temperature=0.05,
+            )
+            m = re.search(r"\{.*\}", raw, re.DOTALL)
+            if m:
+                updated = json.loads(m.group(0))
+                merged = {**current_payload, **updated}
+                # Ensure findings is always a list
+                if isinstance(merged.get("findings"), str):
+                    merged["findings"] = [merged["findings"]]
+                return merged
+        except Exception:
+            pass
+        return current_payload  # Fallback: keep original fields
+
+    def run_task(
+        self,
+        user_prompt: str,
+        uploaded_file_path: Optional[str] = None,
+        conversation_history: Optional[List[Dict]] = None,
+        current_draft_payload: Optional[Dict] = None,
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Runs one agent turn (up to MAX_ITERATIONS steps).
+
+        Yields structured event dicts consumed by the SSE stream in app.py:
+          ROUTER, PLAN, STATUS, ACT, OBSERVE, CODE_OUTPUT,
+          DRAFT_READY, CLARIFYING_QUESTION, FINAL_ANSWER, STUCK_STATE, ERROR
+        """
+        history = list(conversation_history or [])
+        task_type, model_cfg, route_log = self.router.classify_request(
+            user_prompt, has_image=bool(uploaded_file_path)
+        )
+        model_name = model_cfg["name"]
+
         yield {
-            "step": 0,
             "phase": "ROUTER",
             "content": route_log,
             "task_type": task_type,
-            "model_used": model_cfg["name"]
+            "model_used": model_name,
         }
 
-        # System prompt with available tools and strict JSON output formatting
+        # Build conversation context for the LLM
+        context_lines: List[str] = []
+        for msg in history[:-1]:  # Exclude the current turn (last item)
+            role = msg.get("role", "user").upper()
+            context_lines.append(f"[{role}]: {msg.get('content', '')}")
+        if current_draft_payload:
+            context_lines.append(
+                f"\n[ACTIVE DRAFT — PENDING REVISION OR APPROVAL]:\n"
+                f"{json.dumps(current_draft_payload, indent=2)}"
+            )
+        if uploaded_file_path:
+            context_lines.append(f"[UPLOADED FILE]: {uploaded_file_path}")
+
         system_prompt = (
-            "You are an air-gapped Sovereign AI Workbench Agent serving government/defence/PSU operations.\n"
-            "You work strictly via Plan -> Act -> Observe -> Reflect loop.\n\n"
+            "You are Karyalaya AI — an air-gapped government intelligence assistant serving "
+            "government, defence, and PSU operations. You help officers with document drafting, "
+            "compliance checks, data calculations, and operational recommendations.\n\n"
+            "ADVISORY RULE: When you identify a finding that may implicate an SOP clause, "
+            "use doc_search to retrieve relevant SOP context, then provide a grounded advisory: "
+            "'Based on [SOP name/clause], this finding may require [specific action or escalation to role].' "
+            "Ground recommendations in retrieved SOP text, not general assumptions.\n\n"
+            "HARD BOUNDARY: You are an advisor and drafter — never a decision-maker or approver. "
+            "You can draft, recommend, calculate, and flag issues. You must NEVER finalize, "
+            "approve, or auto-submit any document. Every output requires explicit human sign-off. "
+            "Never use 'finalize' as an action. Only 'doc_generator' creates documents.\n\n"
             "AVAILABLE TOOLS:\n"
-            "1. doc_search(query: str): Search local SOP knowledge base for compliance clauses.\n"
-            "2. file_read(file_path: str): Read a file inside workspace.\n"
-            "3. file_write(file_path: str, content: str): Write text file inside workspace.\n"
-            "4. file_list(subfolder: str): List files in workspace.\n"
-            "5. code_sandbox(code: str): Run Python script inside Docker sandbox with --network none.\n"
-            "6. doc_generator(title: str, ref_number: str, plant_unit: str, inspection_date: str, findings: list, sop_reference: str, recommendation: str, filename: str): Generate official .docx file.\n"
-            "7. spreadsheet(sheet_name: str, headers: list, rows: list, filename: str): Generate styled .xlsx Excel report.\n"
-            "8. scan_ingest(file_path: str): Extract text/findings from scanned document/photo.\n\n"
-            "RESPONSE FORMAT (You MUST respond in valid JSON with these keys):\n"
-            "{\n"
-            '  "plan": "Current high-level plan step",\n'
-            '  "action": "tool_name OR final_answer",\n'
-            '  "action_input": { tool arguments object },\n'
-            '  "final_answer": "Final response text if action is final_answer",\n'
-            '  "reflection": "Reflection on observation or progress"\n'
-            "}"
+            "1. scan_ingest(file_path) — Extract text/data from a scanned document or image.\n"
+            "2. doc_search(query, top_k) — Search local SOP knowledge base for relevant clauses.\n"
+            "3. file_read(file_path) — Read a file from workspace.\n"
+            "4. file_write(file_path, content) — Write a text file to workspace.\n"
+            "5. file_list(subfolder) — List workspace files.\n"
+            "6. code_sandbox(code) — Execute Python in an isolated Docker sandbox (--network none). "
+            "Use for calculations, data transformations, or verification checks.\n"
+            "7. doc_generator(title, ref_number, plant_unit, inspection_date, findings, "
+            "sop_reference, recommendation, filename) — Generate AI-drafted .docx for human review.\n"
+            "8. spreadsheet(sheet_name, headers, rows, filename) — Generate Excel report.\n"
+            "9. revise_draft(feedback) — Revise the active draft using human feedback. "
+            "Only use when an active draft exists.\n"
+            "10. clarify(question) — Ask the human a clarifying question. Use ONLY when a required "
+            "field is missing OR extraction confidence is below 0.75.\n\n"
+            "RESPONSE FORMAT — valid JSON only:\n"
+            '{"plan": "...", "action": "tool_name or final_answer", '
+            '"action_input": {...}, "final_answer": "...", "reflection": "..."}'
         )
 
-        history = []
-        if uploaded_file_path:
-            history.append(f"Uploaded File Available: {uploaded_file_path}")
-        history.append(f"User Task: {user_prompt}")
+        loop_history = list(context_lines)
+        loop_history.append(f"[CURRENT USER MESSAGE]: {user_prompt}")
 
         step = 1
-
         while step <= MAX_ITERATIONS:
             prompt = (
-                f"TASK HISTORY:\n" + "\n".join(history) + "\n\n"
-                f"Iteration {step}/{MAX_ITERATIONS}. Provide your next PLAN, ACTION (tool or final_answer), ACTION_INPUT, and REFLECTION in JSON."
+                "\n".join(loop_history)
+                + f"\n\nIteration {step}/{MAX_ITERATIONS}. "
+                "Respond with your PLAN, ACTION, ACTION_INPUT, REFLECTION in JSON."
             )
 
             try:
-                raw_response = self.router.generate(
-                    model_name=model_cfg["name"],
+                raw = self.router.generate(
+                    model_name=model_name,
                     prompt=prompt,
                     system_prompt=system_prompt,
-                    temperature=0.1
+                    temperature=0.1,
                 )
             except Exception as e:
-                yield {
-                    "step": step,
-                    "phase": "ERROR",
-                    "content": f"Ollama generation failed: {e}"
-                }
+                yield {"phase": "ERROR", "step": step, "content": f"Model error: {e}"}
                 break
 
-            # Parse JSON action
-            json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
-            if json_match:
+            # Parse JSON from model response
+            m = re.search(r"\{.*\}", raw, re.DOTALL)
+            action_data: Optional[Dict] = None
+            if m:
                 try:
-                    action_data = json.loads(json_match.group(0))
+                    action_data = json.loads(m.group(0))
                 except Exception:
-                    action_data = None
-            else:
-                action_data = None
-
+                    pass
             if not action_data:
-                # Fallback heuristics for unformatted model responses
                 action_data = {
-                    "plan": "Process request directly",
+                    "plan": "Respond directly",
                     "action": "final_answer",
                     "action_input": {},
-                    "final_answer": raw_response,
-                    "reflection": "Completed response generation."
+                    "final_answer": raw,
+                    "reflection": "Direct response.",
                 }
 
-            plan = action_data.get("plan", "Executing task step")
-            action = action_data.get("action", "final_answer")
+            plan         = action_data.get("plan", "Executing step")
+            action       = action_data.get("action", "final_answer")
             action_input = action_data.get("action_input", {})
-            reflection = action_data.get("reflection", "Step completed.")
+            reflection   = action_data.get("reflection", "Step complete.")
             final_answer = action_data.get("final_answer", "")
 
-            # Log plan update
             yield {
+                "phase": "PLAN",
                 "step": step,
-                "phase": "PLAN & REFLECT",
                 "plan": plan,
                 "action": action,
-                "reflection": reflection
+                "reflection": reflection,
             }
 
-            if action == "final_answer" or not action:
+            # ── Handle special actions ────────────────────────────────────
+
+            if action in ("final_answer", "") or not action:
                 yield {
+                    "phase": "FINAL_ANSWER",
                     "step": step,
-                    "phase": "FINAL ANSWER",
-                    "content": final_answer or raw_response
+                    "content": final_answer or raw,
                 }
                 break
 
-            # Execute Tool Action
+            if action == "clarify":
+                question = action_input.get("question", str(action_input))
+                yield {"phase": "CLARIFYING_QUESTION", "step": step, "question": question}
+                break  # Pause; loop resumes on next /api/chat call with user's reply
+
+            if action == "revise_draft":
+                feedback = action_input.get("feedback", str(action_input))
+                yield {"phase": "STATUS", "step": step, "content": TOOL_STATUS["revise_draft"]}
+
+                if not current_draft_payload:
+                    yield {
+                        "phase": "ERROR",
+                        "step": step,
+                        "content": "No active draft found to revise.",
+                    }
+                    break
+
+                updated = self._call_revision_llm(model_name, current_draft_payload, feedback)
+                gen = generate_approval_note(
+                    title=updated.get("title", "Inspection Approval Note"),
+                    ref_number=updated.get("ref_number", "REF-2026-001"),
+                    plant_unit=updated.get("plant_unit", "Refinery Unit"),
+                    inspection_date=updated.get("inspection_date", "2026-08-27"),
+                    findings=updated.get("findings", []),
+                    sop_reference=updated.get("sop_reference", "Per SOP guidelines"),
+                    recommendation=updated.get("recommendation", "Recommended for approval"),
+                    filename=updated.get("target_filename", "Approval_Note.docx"),
+                )
+                if gen.get("status") == "draft_created":
+                    current_draft_payload = gen["draft_payload"]
+                    yield {
+                        "phase": "DRAFT_READY",
+                        "step": step,
+                        "draft_payload": current_draft_payload,
+                        "draft_file": gen["draft_file"],
+                        "is_revision": True,
+                    }
+                else:
+                    yield {
+                        "phase": "ERROR",
+                        "step": step,
+                        "content": f"Revision failed: {gen.get('error', 'unknown error')}",
+                    }
+                break  # Let user review revised draft before continuing
+
+            # ── Standard tool execution ───────────────────────────────────
+
             yield {
+                "phase": "STATUS",
                 "step": step,
-                "phase": "ACT",
-                "tool": action,
-                "arguments": action_input
+                "content": TOOL_STATUS.get(action, f"Executing {action}..."),
             }
+            yield {"phase": "ACT", "step": step, "tool": action, "arguments": action_input}
 
             observation = self._execute_tool(action, action_input)
 
-            yield {
-                "step": step,
-                "phase": "OBSERVE",
-                "tool": action,
-                "observation": observation
-            }
+            # Post-scan_ingest: deterministic required-field check
+            if action == "scan_ingest":
+                extracted = observation.get("extracted_text", "")
+                confidence = float(observation.get("confidence", 1.0))
+                issues = check_required_fields(extracted, confidence)
+                if issues:
+                    observation["field_issues"] = issues
+                    question = build_clarifying_question(issues, confidence)
+                    yield {"phase": "OBSERVE", "step": step, "tool": action, "observation": observation}
+                    yield {"phase": "CLARIFYING_QUESTION", "step": step, "question": question}
+                    break  # Pause for user clarification
 
-            # Append to history
-            history.append(f"\nStep {step}: Action={action}({json.dumps(action_input)}) -> Observation={json.dumps(observation)}")
+            # Code sandbox: emit dedicated CODE_OUTPUT event for inline rendering
+            if action == "code_sandbox":
+                yield {
+                    "phase": "CODE_OUTPUT",
+                    "step": step,
+                    "code": action_input.get("code", ""),
+                    "stdout": observation.get("stdout", ""),
+                    "stderr": observation.get("stderr", ""),
+                    "exit_code": observation.get("exit_code", 0),
+                    "sandbox_type": observation.get("sandbox_type", ""),
+                }
+
+            # doc_generator creates a draft: emit DRAFT_READY for the UI panel
+            if action == "doc_generator" and observation.get("status") == "draft_created":
+                current_draft_payload = observation.get("draft_payload")
+                yield {
+                    "phase": "DRAFT_READY",
+                    "step": step,
+                    "draft_payload": current_draft_payload,
+                    "draft_file": observation.get("draft_file", ""),
+                    "is_revision": False,
+                }
+
+            yield {"phase": "OBSERVE", "step": step, "tool": action, "observation": observation}
+
+            loop_history.append(
+                f"\nStep {step}: {action}({json.dumps(action_input)}) → "
+                f"{json.dumps(observation)}"
+            )
             step += 1
 
         if step > MAX_ITERATIONS:
             yield {
-                "step": step,
                 "phase": "STUCK_STATE",
-                "content": f"Agent reached maximum iteration limit ({MAX_ITERATIONS}). Human input required."
+                "step": step,
+                "content": (
+                    f"Agent reached the {MAX_ITERATIONS}-step limit. "
+                    "Please provide more specific instructions or break the task into smaller steps."
+                ),
             }
 
 
 if __name__ == "__main__":
     agent = AgentOrchestrator()
-    for trace in agent.run_task("Read SOP guidelines and generate an inspection approval note for Refinery Unit 4B valve inspection"):
-        print(json.dumps(trace, indent=2))
+    for event in agent.run_task("Search SOP knowledge base and summarise the inspection approval guidelines."):
+        print(json.dumps(event, indent=2))

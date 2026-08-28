@@ -3,163 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sovereign AI Workbench — Air-Gapped Government AI</title>
+    <title>Karyalaya AI — Air-Gapped Government Intelligence</title>
+    <meta name="description" content="Air-gapped autonomous AI assistant for government, defence, and PSU operations.">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <!-- Header Navigation -->
+    <!-- Navbar -->
     <header class="navbar">
         <div class="brand">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
             <div>
-                <h1>SOVEREIGN AI WORKBENCH</h1>
-                <span class="sub-text">Air-Gapped Autonomous Intelligence — Government & Defence</span>
+                <h1>KARYALAYA AI</h1>
+                <span class="sub-text">Air-Gapped Autonomous Intelligence — Government &amp; Defence</span>
             </div>
         </div>
         <div class="network-badge-box" id="netBadgeBox">
             <span class="pulse-dot"></span>
             <span id="netStatusText">SECURE (AIR-GAPPED)</span>
-            <span class="conn-count" id="connCountBadge">0 Outbound Connections</span>
+            <span class="conn-count" id="connCountBadge">0 Outbound</span>
         </div>
     </header>
 
-    <div class="main-container">
-        <!-- Sidebar -->
+    <!-- Three-column layout -->
+    <div class="main-container" id="mainContainer">
+
+        <!-- LEFT SIDEBAR — always visible -->
         <aside class="sidebar">
+
+            <!-- Stat cards (compact, stacked) -->
+            <div class="stat-mini-row">
+                <div class="stat-mini-card">
+                    <div class="accent-shape orange"></div>
+                    <div class="stat-mini-number" id="metricConnCount">0</div>
+                    <div class="stat-mini-label">Outbound Sockets</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="accent-shape cyan"></div>
+                    <div class="stat-mini-number">100%</div>
+                    <div class="stat-mini-label">Local Inference</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="accent-shape yellow"></div>
+                    <div class="stat-mini-number">8 Max</div>
+                    <div class="stat-mini-label">Agent Steps/Turn</div>
+                </div>
+            </div>
+
+            <!-- Network sovereignty panel -->
             <div class="panel-card">
                 <div class="card-header">
-                    <svg class="icon-sm green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    <h3>Network Sovereignty Proof</h3>
+                    <svg class="icon-sm green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <h3>Network Sovereignty</h3>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Firewall Guard:</span>
-                    <span class="val green" id="netFirewallVal">macOS pfctl Active</span>
+                    <span class="lbl">Firewall:</span>
+                    <span class="val green" id="netFirewallVal">pfctl Active</span>
                 </div>
                 <div class="net-detail-item">
                     <span class="lbl">Docker Sandbox:</span>
-                    <span class="val green">Disabled (--network none)</span>
+                    <span class="val green">--network none</span>
                 </div>
                 <div class="net-detail-item">
                     <span class="lbl">Outbound Sockets:</span>
-                    <span class="val green" id="outboundSocketVal">0 Connections</span>
+                    <span class="val green" id="outboundSocketVal">0</span>
                 </div>
                 <div class="net-detail-item">
-                    <span class="lbl">Last Verification:</span>
-                    <span class="val" id="lastVerifiedVal">--:--:--</span>
+                    <span class="lbl">Last Check:</span>
+                    <span class="val" id="lastVerifiedVal">--:--</span>
                 </div>
             </div>
 
+            <!-- SOP Knowledge Base -->
             <div class="panel-card">
                 <div class="card-header">
-                    <svg class="icon-sm cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                    <h3>SOP Knowledge Base</h3>
+                    <svg class="icon-sm cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <h3>Reference Documents</h3>
                 </div>
-                <p class="small-text">Local Chroma Vector DB for grounding drafted documents in official plant SOPs.</p>
-                <button class="btn btn-secondary" id="btnIngestSop">Re-ingest Plant SOPs</button>
-                <div id="sopIngestStatus" class="status-msg"></div>
+                <p class="small-text">Add SOPs or reference PDFs to the knowledge base.</p>
+
+                <div class="upload-zone" id="sopUploadZone">
+                    <input type="file" id="sopFileInput" accept=".pdf,.txt,.md" hidden>
+                    <div class="upload-inner" onclick="document.getElementById('sopFileInput').click()">
+                        <svg class="upload-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <span id="sopUploadText">Upload SOP / Reference (PDF, TXT, MD)</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" id="btnReindex" style="margin-top:0.5rem;">Re-index All SOPs</button>
+                <div id="sopStatus" class="status-msg"></div>
             </div>
 
+            <!-- Official Deliverables -->
             <div class="panel-card">
                 <div class="card-header">
-                    <svg class="icon-sm yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <svg class="icon-sm yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
                     <h3>Official Deliverables</h3>
                 </div>
-                <div id="deliverablesList" class="deliverables-list">
+                <div id="deliverablesList">
                     <span class="small-text">No finalized deliverables yet.</span>
                 </div>
             </div>
+
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="content-area">
+        <!-- CENTER — Chat interface -->
+        <main class="chat-area">
 
-            <!-- High-Contrast Metric Cards Grid (Inspired by Reference Design) -->
-            <div class="metric-card-grid">
-                <div class="stat-card">
-                    <div class="accent-shape orange"></div>
-                    <div class="stat-number" id="metricConnCount">0</div>
-                    <div class="stat-label">External Outbound Sockets</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="accent-shape cyan"></div>
-                    <div class="stat-number">100%</div>
-                    <div class="stat-label">Air-Gapped Local Inference</div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="accent-shape yellow"></div>
-                    <div class="stat-number">8 Max</div>
-                    <div class="stat-label">Agent Iteration Safeguard</div>
-                </div>
-            </div>
-
-            <!-- Low-Confidence Warning Banner (Hidden by default) -->
-            <div id="lowConfidenceBanner" class="alert-banner" style="display: none;">
-                <svg class="icon-md yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <!-- Low-confidence warning banner -->
+            <div id="lowConfBanner" class="alert-banner" style="display:none; margin: 0.75rem 1.25rem 0;">
+                <svg class="icon-md yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
                 <div>
-                    <div class="warning-title">LOW-CONFIDENCE EXTRACTION (&lt;75%) — HUMAN VERIFICATION REQUIRED</div>
-                    <p class="small-text">The uploaded scan contained noisy text. Vision Model (Pass 2) was invoked. Please carefully inspect extracted data before sign-off.</p>
+                    <div class="warning-title">LOW-CONFIDENCE EXTRACTION — HUMAN VERIFICATION REQUIRED</div>
+                    <p class="small-text">OCR confidence below 75%. Vision model invoked. Verify extracted data carefully before approval.</p>
                 </div>
             </div>
 
-            <!-- Task Input Panel -->
-            <section class="panel-card task-panel">
-                <h2>Task & Document Dispatch</h2>
-                <p class="small-text" style="margin-bottom: 1rem;">Upload scanned inspection reports or enter your instructions. Model Router auto-selects the local Ollama model.</p>
-
-                <div class="upload-zone" id="uploadZone">
-                    <input type="file" id="fileInput" accept="image/*,.pdf,.txt" hidden>
-                    <div class="upload-inner" onclick="document.getElementById('fileInput').click()">
-                        <svg class="upload-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <span id="uploadText">Click or Drag & Drop Scanned Report / Inspection Photo Here</span>
+            <!-- Chat message thread -->
+            <div class="chat-thread" id="chatThread">
+                <div class="chat-message agent">
+                    <div class="agent-bubble">
+                        Karyalaya AI is ready. Upload a document or describe your task to begin.
+                        All inference runs locally — zero outbound connections.
                     </div>
                 </div>
+            </div>
 
-                <div class="input-group">
-                    <textarea id="taskPrompt" placeholder="e.g. Ingest the uploaded inspection scan, check SOP-702 for approval guidelines, draft an official approval note, and prepare for human review."></textarea>
-                    <button class="btn btn-primary" id="btnRunTask">Execute Agent Task</button>
-                </div>
-            </section>
+            <!-- Task file upload indicator (shown after upload) -->
+            <div id="uploadedFileBar" style="display:none; padding: 0 1.25rem 0.5rem;">
+                <span class="uploaded-file-tag" id="uploadedFileTag">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                    </svg>
+                    <span id="uploadedFileTagText">No file</span>
+                    <button id="btnClearFile" style="background:none;border:none;color:inherit;cursor:pointer;font-size:0.8rem;padding:0 0 0 4px;">x</button>
+                </span>
+            </div>
 
-            <!-- Human Review & Approval Panel (Shown when draft is ready) -->
-            <section id="humanReviewPanel" class="panel-card review-card" style="display: none;">
-                <div class="highlight-user-tag">
-                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                    <span>HUMAN REVIEW & SIGN-OFF REQUIRED</span>
-                </div>
-
-                <div class="card-header">
-                    <h2>AI-DRAFTED DOCUMENT — PENDING APPROVAL</h2>
-                </div>
-
-                <div class="draft-preview-box" id="draftPreviewBox">
-                    <!-- Draft content populated dynamically by JavaScript -->
-                </div>
-
-                <div class="approval-actions">
-                    <button class="btn btn-accent-yellow" id="btnApproveDraft">Confirm & Finalize Official Deliverable (.docx)</button>
-                </div>
-            </section>
-
-            <!-- Visible Agent Execution Trace Console -->
-            <section class="panel-card trace-panel">
-                <div class="trace-header">
-                    <h2>Live Agent Execution Trace</h2>
-                    <span class="badge gray-badge" id="traceModelBadge">Router Ready</span>
-                </div>
-
-                <div class="trace-console" id="traceConsole">
-                    <div class="trace-entry system">
-                        <span class="timestamp">[SYSTEM READY]</span> Sovereign AI Workbench initialized. All model inferencing running locally on MacBook M4. Zero outbound connections.
-                    </div>
-                </div>
-            </section>
+            <!-- Chat input bar -->
+            <div class="chat-input-bar">
+                <input type="file" id="taskFileInput" accept="image/*,.pdf,.txt" hidden>
+                <button class="btn-icon" id="btnAttachFile" title="Attach scan or document" onclick="document.getElementById('taskFileInput').click()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                    </svg>
+                </button>
+                <textarea id="chatInput" placeholder="Describe your task or type a question... (Shift+Enter for new line)" rows="1"></textarea>
+                <button class="btn-send" id="btnSend">Send</button>
+            </div>
         </main>
-    </div>
+
+        <!-- RIGHT PANEL — Draft preview (hidden until DRAFT_READY) -->
+        <aside class="draft-panel" id="draftPanel" style="display:none;">
+            <div class="draft-panel-header">
+                <div class="draft-panel-title-row">
+                    <h2 style="font-size:0.95rem;font-weight:700;color:var(--white);">AI Draft Document</h2>
+                    <span class="revision-label" id="revisionLabel">Initial Draft</span>
+                </div>
+                <div class="draft-panel-actions">
+                    <button class="btn-approve" id="btnApproveDraft">Confirm &amp; Finalize (.docx)</button>
+                    <a class="btn-download" id="draftDownloadLink" href="#" target="_blank" title="Download draft .docx">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                    </a>
+                </div>
+                <p class="small-text" style="margin:0;">Review carefully. Type revision feedback in the chat, or click Confirm to finalize.</p>
+            </div>
+            <div class="draft-preview-scroll" id="draftPreviewScroll">
+                <!-- draft_payload_to_html() output injected here -->
+            </div>
+        </aside>
+
+    </div><!-- /main-container -->
 
     <script src="/static/app.js"></script>
 </body>

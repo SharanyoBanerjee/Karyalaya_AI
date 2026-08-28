@@ -1,5 +1,5 @@
 """
-Model Router and Request Classifier for Sovereign AI Workbench.
+Model Router and Request Classifier for Karyalaya AI.
 Routes incoming requests to the appropriate local Ollama model based on task type.
 Strictly local, no internet fallback.
 """

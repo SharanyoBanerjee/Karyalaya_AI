@@ -1,12 +1,12 @@
 """
-Flagship End-to-End Task Verification Script for Sovereign AI Workbench.
+Flagship End-to-End Task Verification Script for Karyalaya AI.
 Verifies:
 1. Vision model mapping (qwen2-vl:7b).
 2. Multimodal ingestion & low-confidence warning banner.
 3. Model Router classification.
 4. SOP Grounding RAG.
 5. AI Draft Generation (requires human approval).
-6. Human Sign-Off & Official Deliverable Finalization.
+6. Human Sign-Off & Official Deliverable Finalization with hard PermissionError gate.
 7. Egress Watchdog (0 outbound connections).
 """
 
@@ -28,7 +28,7 @@ from network_monitor.egress_watchdog import get_network_status
 
 def run_flagship_demo():
     print("===============================================================")
-    print("   FLAGSHIP END-TO-END DEMO — SOVEREIGN AI WORKBENCH   ")
+    print("   FLAGSHIP END-TO-END DEMO — KARYALAYA AI   ")
     print("===============================================================\n")
 
     # Step 1: Network Check
@@ -75,7 +75,7 @@ def run_flagship_demo():
             "Pressure seal valve #3 hydrostatic pressure test held 150 PSI for 45 minutes with zero leakage.",
             "Gasket replaced per routine maintenance schedule."
         ],
-        sop_reference=f"Grounded in SOP-702 Guidelines.",
+        sop_reference="Grounded in SOP-702 Guidelines.",
         recommendation="Approved for regular operational commissioning for 12 calendar months.",
         filename="Official_Approval_Note_Unit4B.docx"
     )
@@ -83,9 +83,17 @@ def run_flagship_demo():
     print(f"Requires Human Approval: {draft_res['requires_human_approval']}")
     print(f"Draft File: {draft_res['draft_file']}")
 
-    # Step 7: Human Review & Sign-Off Confirmation
-    print("\n[STEP 7: HUMAN REVIEW & SIGN-OFF] User approves draft in UI...")
-    official_res = finalize_official_document(draft_res['draft_payload'])
+    # Step 7: Human Review & Sign-Off Confirmation Gate Test
+    print("\n[STEP 7: HUMAN REVIEW & SIGN-OFF GATE TEST]")
+    # First verify unauthorized call fails
+    try:
+        finalize_official_document(draft_res['draft_payload'], human_confirmed=False)
+        print("ERROR: Unauthorized finalize succeeded when it should have raised PermissionError!")
+    except PermissionError:
+        print("CONFIRMED: Unauthorized finalize without human confirmation raises PermissionError.")
+
+    # Now verify explicit human approval succeeds
+    official_res = finalize_official_document(draft_res['draft_payload'], human_confirmed=True)
     print(f"Official Document Created: {official_res['official_filename']}")
     print(f"Message: {official_res['message']}")
 

@@ -1,11 +1,16 @@
 """
-Document Generator Tool for Sovereign AI Workbench.
-Creates AI-drafted documents for human review, and finalizes official .docx deliverables upon explicit human approval.
-Outputs directly into workspace/deliverables/ folder.
+Document Generator Tool for Karyalaya AI.
+
+Responsibilities:
+  - generate_approval_note()  — creates an AI draft (PENDING REVIEW). Agent-callable.
+  - finalize_official_document() — writes the official .docx. Requires human_confirmed=True.
+    Raises PermissionError otherwise. NOT callable by the agent loop (excluded from tool registry).
+  - draft_payload_to_html()  — renders draft fields as HTML for inline UI preview.
+  - create_approval_note_docx() — internal shared docx builder.
 """
 
 import os
-import docx
+from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -26,83 +31,77 @@ def create_approval_note_docx(
     sop_reference: str,
     recommendation: str,
     target_path: str,
-    is_official: bool = False
+    is_official: bool = False,
 ) -> str:
-    """Builds and saves .docx file at target_path."""
-    doc = docx.Document()
+    """Builds and saves an approval note .docx at target_path. Returns the saved path."""
+    doc = Document()
 
-    # Page Margins
     for section in doc.sections:
-        section.top_margin = Inches(1)
+        section.top_margin    = Inches(1)
         section.bottom_margin = Inches(1)
-        section.left_margin = Inches(1)
-        section.right_margin = Inches(1)
+        section.left_margin   = Inches(1)
+        section.right_margin  = Inches(1)
 
-    # Header Title
+    # Document type banner
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc_type_text = "OFFICIAL INSPECTION APPROVAL NOTE" if is_official else "DRAFT INSPECTION APPROVAL NOTE (PENDING HUMAN REVIEW)"
-    r_title = p_title.add_run(doc_type_text)
+    banner = "OFFICIAL INSPECTION APPROVAL NOTE" if is_official \
+        else "DRAFT INSPECTION APPROVAL NOTE (PENDING HUMAN REVIEW)"
+    r_title = p_title.add_run(banner)
     r_title.bold = True
     r_title.font.size = Pt(15)
     r_title.font.color.rgb = RGBColor(0, 51, 102) if is_official else RGBColor(180, 100, 0)
 
-    # Subtitle
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r_sub = p_sub.add_run(f"SOVEREIGN AI WORKBENCH - {plant_unit.upper()}")
+    r_sub = p_sub.add_run(f"KARYALAYA AI — {plant_unit.upper()}")
     r_sub.font.size = Pt(10)
     r_sub.font.italic = True
 
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
-    # Meta Table
+    # Metadata table
     table = doc.add_table(rows=4, cols=2)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
-
-    meta_data = [
+    for idx, (label, val) in enumerate([
         ("Document Title:", title),
         ("Reference No.:", ref_number),
         ("Plant / Facility Unit:", plant_unit),
-        ("Inspection Date:", inspection_date)
-    ]
-
-    for idx, (label, val) in enumerate(meta_data):
+        ("Inspection Date:", inspection_date),
+    ]):
         row = table.rows[idx]
-        cell_lbl, cell_val = row.cells[0], row.cells[1]
-        cell_lbl.text = label
-        cell_val.text = val
-        cell_lbl.paragraphs[0].runs[0].bold = True
+        row.cells[0].text = label
+        row.cells[1].text = val
+        row.cells[0].paragraphs[0].runs[0].bold = True
 
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
-    # Section 1: Inspection Findings
+    # Section 1: Findings
     h1 = doc.add_heading("1. Key Inspection Findings", level=1)
     h1.runs[0].font.color.rgb = RGBColor(0, 51, 102)
-
     for finding in findings:
-        p_f = doc.add_paragraph(style='List Bullet')
-        p_f.add_run(finding)
+        doc.add_paragraph(finding, style="List Bullet")
 
-    # Section 2: Applicable SOP Grounding
+    # Section 2: SOP Grounding
     h2 = doc.add_heading("2. Grounding & SOP Reference", level=1)
     h2.runs[0].font.color.rgb = RGBColor(0, 51, 102)
-    p_sop = doc.add_paragraph()
-    p_sop.add_run(sop_reference)
+    doc.add_paragraph(sop_reference)
 
-    # Section 3: Recommendation & Next Steps
+    # Section 3: Recommendation
     h3 = doc.add_heading("3. Recommendation & Next Steps", level=1)
     h3.runs[0].font.color.rgb = RGBColor(0, 51, 102)
-    p_rec = doc.add_paragraph()
-    p_rec.add_run(recommendation)
+    doc.add_paragraph(recommendation)
 
-    # Sign-off Block
+    # Sign-off block
     doc.add_paragraph().paragraph_format.space_after = Pt(20)
+    sign_text = (
+        "Approved & Signed by:\n\n_______________________\nChief Inspection Officer / Unit Head"
+        if is_official else
+        "PENDING HUMAN REVIEW & SIGN-OFF\n\n_______________________\nAuthorized Approver Signature Required"
+    )
     p_sign = doc.add_paragraph()
-    sign_text = "Approved & Signed by:\n\n_______________________\nChief Inspection Officer / Unit Head" if is_official else "PENDING HUMAN REVIEW & SIGN-OFF\n\n_______________________\nAuthorized Approver Signature Required"
-    p_sign.add_run(sign_text)
-    p_sign.runs[0].bold = True
+    p_sign.add_run(sign_text).bold = True
 
     doc.save(target_path)
     return target_path
@@ -116,11 +115,12 @@ def generate_approval_note(
     findings: List[str],
     sop_reference: str,
     recommendation: str,
-    filename: str = "Approval_Note.docx"
+    filename: str = "Approval_Note.docx",
 ) -> Dict[str, Any]:
     """
-    Step 1: Generates an AI Draft Approval Note (PENDING HUMAN APPROVAL).
-    Requires explicit human confirmation before saving as official deliverable.
+    Creates an AI-drafted approval note in workspace/deliverables/ as a DRAFT.
+    Returns a draft_payload dict that must be passed to finalize_official_document()
+    after explicit human confirmation. This function is safe to call from the agent loop.
     """
     try:
         os.makedirs(DELIVERABLES_DIR, exist_ok=True)
@@ -136,7 +136,7 @@ def generate_approval_note(
             sop_reference=sop_reference,
             recommendation=recommendation,
             target_path=draft_path,
-            is_official=False
+            is_official=False,
         )
 
         draft_payload = {
@@ -147,25 +147,39 @@ def generate_approval_note(
             "findings": findings,
             "sop_reference": sop_reference,
             "recommendation": recommendation,
-            "target_filename": filename
+            "target_filename": filename,
         }
 
         return {
             "status": "draft_created",
             "requires_human_approval": True,
-            "message": "AI Draft generated. Human sign-off required before finalizing official document.",
+            "message": "AI Draft generated. Human sign-off required before finalizing.",
             "draft_file": draft_filename,
-            "draft_payload": draft_payload
+            "draft_payload": draft_payload,
         }
-
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 
-def finalize_official_document(draft_payload: Dict[str, Any]) -> Dict[str, Any]:
+def finalize_official_document(
+    draft_payload: Dict[str, Any],
+    *,
+    human_confirmed: bool,
+) -> Dict[str, Any]:
     """
-    Step 2: Finalizes official .docx deliverable upon human sign-off.
+    Writes the official .docx deliverable to workspace/deliverables/.
+
+    ENFORCEMENT GATE: raises PermissionError if human_confirmed is not exactly True.
+    This function is intentionally excluded from the agent tool registry and is only
+    reachable via the /api/approve_draft HTTP endpoint, which supplies human_confirmed=True
+    after an explicit user action in the UI.
     """
+    if human_confirmed is not True:
+        raise PermissionError(
+            "Human confirmation is required to finalize an official document. "
+            "This function must not be called without explicit human sign-off."
+        )
+
     try:
         os.makedirs(DELIVERABLES_DIR, exist_ok=True)
         filename = draft_payload.get("target_filename", "Official_Approval_Note.docx")
@@ -182,15 +196,62 @@ def finalize_official_document(draft_payload: Dict[str, Any]) -> Dict[str, Any]:
             sop_reference=draft_payload.get("sop_reference", "Per SOP guidelines"),
             recommendation=draft_payload.get("recommendation", "Approved"),
             target_path=target_path,
-            is_official=True
+            is_official=True,
         )
 
         return {
             "status": "success",
             "official_filename": filename,
             "file_path": target_path,
-            "message": f"Human approval confirmed. Official deliverable {filename} created successfully."
+            "message": f"Human approval confirmed. Official deliverable '{filename}' created.",
         }
-
+    except PermissionError:
+        raise
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+def draft_payload_to_html(draft_payload: Dict[str, Any], revision: int = 0) -> str:
+    """
+    Renders a draft_payload dict as structured HTML for inline browser preview.
+    No file I/O — pure string rendering. Used by the /api/chat SSE stream.
+    """
+    revision_label = (
+        f'<span class="revision-label">Revision {revision}</span>'
+        if revision > 0
+        else '<span class="revision-label">Initial Draft</span>'
+    )
+    findings = draft_payload.get("findings", [])
+    findings_html = "".join(f"<li>{f}</li>" for f in findings) if findings else "<li>No findings recorded.</li>"
+
+    return f"""<div class="doc-preview">
+  <div class="doc-header">
+    <div class="doc-status-bar">
+      <span class="doc-draft-tag">AI DRAFT — PENDING HUMAN SIGN-OFF</span>
+      {revision_label}
+    </div>
+    <div class="doc-title">{draft_payload.get("title", "Inspection Approval Note")}</div>
+  </div>
+  <table class="doc-meta-table">
+    <tr><th>Reference No.</th><td>{draft_payload.get("ref_number", "—")}</td></tr>
+    <tr><th>Plant / Unit</th><td>{draft_payload.get("plant_unit", "—")}</td></tr>
+    <tr><th>Inspection Date</th><td>{draft_payload.get("inspection_date", "—")}</td></tr>
+  </table>
+  <div class="doc-section">
+    <h3>Key Inspection Findings</h3>
+    <ul>{findings_html}</ul>
+  </div>
+  <div class="doc-section">
+    <h3>SOP Grounding &amp; Reference</h3>
+    <p>{draft_payload.get("sop_reference", "—")}</p>
+  </div>
+  <div class="doc-section">
+    <h3>Recommendation</h3>
+    <p>{draft_payload.get("recommendation", "—")}</p>
+  </div>
+  <div class="doc-signoff">
+    <p>PENDING HUMAN REVIEW &amp; SIGN-OFF</p>
+    <div class="signoff-line">___________________________</div>
+    <p class="signoff-role">Authorized Approver Signature Required</p>
+  </div>
+</div>"""

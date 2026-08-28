@@ -1,272 +1,438 @@
-// Sovereign AI Workbench Frontend Controller — High-Contrast Dark Theme Edition
+// Karyalaya AI — Conversational Agent Frontend Controller
 
-let uploadedFileName = null;
-let currentDraftPayload = null;
+// ── Session & State ──────────────────────────────────────────────────────────
+const SESSION_ID = crypto.randomUUID();
 
+let uploadedTaskFile   = null;   // File name of the task scan/photo in uploads/
+let currentDraftPayload = null;  // Active draft waiting for human approval
+let currentDraftFile    = null;  // DRAFT_ filename for download link
+let isAgentRunning      = false; // Prevent parallel submissions
+
+// ── DOM Ready ────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     initNetworkMonitor();
-    initFileUpload();
-    initDeliverablesList();
+    initSopUpload();
+    initTaskFileUpload();
+    loadDeliverables();
 
-    document.getElementById("btnRunTask").addEventListener("click", runAgentTask);
-    document.getElementById("btnIngestSop").addEventListener("click", ingestSops);
-    document.getElementById("btnApproveDraft").addEventListener("click", approveCurrentDraft);
+    document.getElementById("btnSend").addEventListener("click", sendMessage);
+    document.getElementById("btnReindex").addEventListener("click", reindexSops);
+    document.getElementById("btnApproveDraft").addEventListener("click", approveDraft);
+    document.getElementById("btnClearFile").addEventListener("click", clearTaskFile);
 
-    // Poll network watchdog every 3 seconds
-    setInterval(updateNetworkStatus, 3000);
+    // Textarea — send on Enter (not Shift+Enter), auto-resize
+    const textarea = document.getElementById("chatInput");
+    textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    textarea.addEventListener("input", () => {
+        textarea.style.height = "auto";
+        textarea.style.height = Math.min(textarea.scrollHeight, 130) + "px";
+    });
+
+    // Poll network watchdog every 4 seconds
+    setInterval(updateNetworkStatus, 4000);
 });
 
-// Network Egress Watchdog Polling
-async function initNetworkMonitor() {
-    await updateNetworkStatus();
-}
+// ── Network Monitor ───────────────────────────────────────────────────────────
+async function initNetworkMonitor() { await updateNetworkStatus(); }
 
 async function updateNetworkStatus() {
     try {
-        const res = await fetch("/api/network_status");
+        const res  = await fetch("/api/network_status");
         if (!res.ok) return;
         const data = await res.json();
 
-        const statusText = document.getElementById("netStatusText");
-        const countBadge = document.getElementById("connCountBadge");
-        const metricConnCount = document.getElementById("metricConnCount");
-        const fwVal = document.getElementById("netFirewallVal");
-        const socketVal = document.getElementById("outboundSocketVal");
-        const lastVal = document.getElementById("lastVerifiedVal");
+        const isSecure = data.is_airgapped;
+        const badge    = document.getElementById("netBadgeBox");
+        const text     = document.getElementById("netStatusText");
+        const count    = document.getElementById("connCountBadge");
+        const metric   = document.getElementById("metricConnCount");
+        const fwVal    = document.getElementById("netFirewallVal");
+        const sockVal  = document.getElementById("outboundSocketVal");
+        const lastVal  = document.getElementById("lastVerifiedVal");
 
-        if (data.is_airgapped) {
-            statusText.innerText = "SECURE (AIR-GAPPED)";
-            statusText.style.color = "#10b981";
-            countBadge.innerText = `${data.outbound_connection_count} Outbound Connections`;
-        } else {
-            statusText.innerText = "WARNING (EGRESS DETECTED)";
-            statusText.style.color = "#ef4444";
-            countBadge.innerText = `${data.outbound_connection_count} Outbound Connections`;
-        }
-
-        if (metricConnCount) {
-            metricConnCount.innerText = data.outbound_connection_count;
-        }
-
-        fwVal.innerText = data.firewall_status || "pfctl Active";
-        socketVal.innerText = `${data.outbound_connection_count} External Sockets`;
-        lastVal.innerText = data.last_checked || new Date().toLocaleTimeString();
-
-    } catch (e) {
-        console.error("Network monitor update failed:", e);
-    }
+        text.innerText  = isSecure ? "SECURE (AIR-GAPPED)" : "WARNING (EGRESS DETECTED)";
+        text.style.color = isSecure ? "var(--green)" : "#ef4444";
+        badge.style.borderColor = isSecure ? "var(--green)" : "#ef4444";
+        count.innerText = `${data.outbound_connection_count} Outbound`;
+        if (metric)  metric.innerText   = data.outbound_connection_count;
+        if (fwVal)   fwVal.innerText    = data.firewall_status  || "pfctl Active";
+        if (sockVal) sockVal.innerText  = data.outbound_connection_count;
+        if (lastVal) lastVal.innerText  = data.last_checked
+            ? data.last_checked.split(" ")[1] || data.last_checked
+            : new Date().toLocaleTimeString();
+    } catch (_) {}
 }
 
-// File Upload Handler
-function initFileUpload() {
-    const dropZone = document.getElementById("uploadZone");
-    const fileInput = document.getElementById("fileInput");
-
-    dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = "#facc15";
-    });
-
-    dropZone.addEventListener("dragleave", () => {
-        dropZone.style.borderColor = "rgba(255, 255, 255, 0.14)";
-    });
-
-    dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = "rgba(255, 255, 255, 0.14)";
-        if (e.dataTransfer.files.length > 0) {
-            fileInput.files = e.dataTransfer.files;
-            handleUpload(e.dataTransfer.files[0]);
-        }
-    });
-
-    fileInput.addEventListener("change", () => {
-        if (fileInput.files.length > 0) {
-            handleUpload(fileInput.files[0]);
-        }
+// ── Task File Upload (scan / photo) ───────────────────────────────────────────
+function initTaskFileUpload() {
+    document.getElementById("taskFileInput").addEventListener("change", async (e) => {
+        if (e.target.files.length > 0) await uploadTaskFile(e.target.files[0]);
     });
 }
 
-async function handleUpload(file) {
-    const uploadText = document.getElementById("uploadText");
-    uploadText.innerText = `Uploading ${file.name}...`;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
+async function uploadTaskFile(file) {
+    const form = new FormData();
+    form.append("file", file);
     try {
-        const res = await fetch("/api/upload", {
-            method: "POST",
-            body: formData
-        });
+        const res  = await fetch("/api/upload", { method: "POST", body: form });
         const data = await res.json();
         if (data.status === "success") {
-            uploadedFileName = data.filename;
-            uploadText.innerText = `Uploaded: ${data.filename} (${(file.size / 1024).toFixed(1)} KB)`;
-            appendTraceEntry("system", `Uploaded file '${data.filename}' ready for multimodal ingestion.`);
-        } else {
-            uploadText.innerText = "Upload failed.";
+            uploadedTaskFile = data.filename;
+            document.getElementById("uploadedFileTagText").innerText = data.filename;
+            document.getElementById("uploadedFileBar").style.display = "block";
+            appendStatusLine(getTypingEl(), `Attached: ${data.filename}`);
         }
     } catch (e) {
-        uploadText.innerText = "Upload error.";
-        console.error(e);
+        appendAgentBubble(`File upload failed: ${e}`);
     }
 }
 
-// SOP Ingestion
-async function ingestSops() {
-    const statusDiv = document.getElementById("sopIngestStatus");
-    statusDiv.innerText = "Ingesting plant SOPs into Chroma Vector DB...";
+function clearTaskFile() {
+    uploadedTaskFile = null;
+    document.getElementById("uploadedFileBar").style.display = "none";
+    document.getElementById("taskFileInput").value = "";
+}
+
+// ── SOP Upload & Reindex ─────────────────────────────────────────────────────
+function initSopUpload() {
+    document.getElementById("sopFileInput").addEventListener("change", async (e) => {
+        if (e.target.files.length > 0) await uploadSop(e.target.files[0]);
+    });
+}
+
+async function uploadSop(file) {
+    const statusEl = document.getElementById("sopStatus");
+    statusEl.innerText = `Uploading ${file.name}...`;
+    const form = new FormData();
+    form.append("file", file);
     try {
-        const res = await fetch("/api/ingest_sops", { method: "POST" });
+        const res  = await fetch("/api/upload_sop", { method: "POST", body: form });
         const data = await res.json();
-        statusDiv.innerText = `Ingestion complete: ${data.total_chunks_ingested || 0} chunks indexed.`;
-        appendTraceEntry("system", `Re-ingested plant SOPs into local Chroma DB (${data.files_processed} files processed).`);
+        statusEl.innerText = data.message || `${file.name} indexed.`;
+        document.getElementById("sopUploadText").innerText = "Upload SOP / Reference (PDF, TXT, MD)";
+        document.getElementById("sopFileInput").value = "";
     } catch (e) {
-        statusDiv.innerText = "Ingestion failed.";
+        statusEl.innerText = `Upload failed: ${e}`;
     }
 }
 
-// List Deliverables
-async function initDeliverablesList() {
+async function reindexSops() {
+    const statusEl = document.getElementById("sopStatus");
+    statusEl.innerText = "Re-indexing all SOPs...";
     try {
-        const res = await fetch("/api/deliverables");
+        const res  = await fetch("/api/ingest_sops", { method: "POST" });
         const data = await res.json();
-        const listDiv = document.getElementById("deliverablesList");
-        listDiv.innerHTML = "";
+        statusEl.innerText = `Re-index complete — ${data.total_chunks_ingested || 0} chunks indexed.`;
+    } catch (e) {
+        statusEl.innerText = `Re-index failed: ${e}`;
+    }
+}
 
+// ── Deliverables ─────────────────────────────────────────────────────────────
+async function loadDeliverables() {
+    try {
+        const res  = await fetch("/api/deliverables");
+        const data = await res.json();
+        const el   = document.getElementById("deliverablesList");
+        el.innerHTML = "";
         if (data.deliverables && data.deliverables.length > 0) {
             data.deliverables.forEach(item => {
-                const link = document.createElement("a");
-                link.className = "deliverable-link";
-                link.href = `/api/deliverables/${encodeURIComponent(item.name)}`;
-                link.innerText = `Download: ${item.name}`;
-                link.target = "_blank";
-                listDiv.appendChild(link);
+                const a = document.createElement("a");
+                a.className = "deliverable-link";
+                a.href      = `/api/deliverables/${encodeURIComponent(item.name)}`;
+                a.innerText = item.name;
+                a.target    = "_blank";
+                el.appendChild(a);
             });
         } else {
-            listDiv.innerHTML = '<span class="small-text">No finalized deliverables yet.</span>';
+            el.innerHTML = '<span class="small-text">No finalized deliverables yet.</span>';
         }
-    } catch (e) {
-        console.error("Failed to load deliverables:", e);
-    }
+    } catch (_) {}
 }
 
-// Append Entry to Visible Trace Console
-function appendTraceEntry(type, content, extra = {}) {
-    const consoleDiv = document.getElementById("traceConsole");
-    const entry = document.createElement("div");
-    entry.className = `trace-entry ${type}`;
+// ── Chat Message Rendering ───────────────────────────────────────────────────
 
-    const timestamp = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span>`;
-    
-    if (type === "router") {
-        entry.innerHTML = `${timestamp} <strong>MODEL ROUTER:</strong> ${content}`;
-        document.getElementById("traceModelBadge").innerText = `Model: ${extra.model || 'qwen2.5:7b'}`;
-    } else if (type === "act") {
-        entry.innerHTML = `${timestamp} <strong>ACTION (Step ${extra.step}):</strong> Tool <code>${extra.tool}</code> called with args: <pre>${JSON.stringify(extra.args, null, 2)}</pre>`;
-    } else if (type === "observe") {
-        entry.innerHTML = `${timestamp} <strong>OBSERVATION:</strong> <pre>${JSON.stringify(extra.obs, null, 2)}</pre>`;
-    } else if (type === "plan") {
-        entry.innerHTML = `${timestamp} <strong>PLAN & REFLECT (Step ${extra.step}):</strong> ${extra.plan}<br><em>Reflection: ${extra.reflection}</em>`;
-    } else if (type === "final") {
-        entry.innerHTML = `${timestamp} <strong>AGENT OUTPUT:</strong><br>${content}`;
-    } else {
-        entry.innerHTML = `${timestamp} ${content}`;
-    }
-
-    consoleDiv.appendChild(entry);
-    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+/** Appends a user bubble to the thread. */
+function appendUserBubble(text) {
+    const thread = document.getElementById("chatThread");
+    const wrap   = document.createElement("div");
+    wrap.className = "chat-message user";
+    const bubble   = document.createElement("div");
+    bubble.className = "user-bubble";
+    bubble.innerText = text;
+    wrap.appendChild(bubble);
+    thread.appendChild(wrap);
+    thread.scrollTop = thread.scrollHeight;
+    return wrap;
 }
 
-// Display Human Review Panel
-function showHumanReviewPanel(draftPayload) {
+/**
+ * Creates an agent message container with an initial bubble.
+ * Returns the wrapper so status lines and extras can be appended to it.
+ */
+function createAgentMessage(initialText = "") {
+    const thread = document.getElementById("chatThread");
+    const wrap   = document.createElement("div");
+    wrap.className = "chat-message agent";
+
+    const bubble   = document.createElement("div");
+    bubble.className = "agent-bubble";
+    if (initialText) bubble.innerText = initialText;
+    wrap.appendChild(bubble);
+
+    thread.appendChild(wrap);
+    thread.scrollTop = thread.scrollHeight;
+    return { wrap, bubble };
+}
+
+/** Appends a status line under an existing agent message wrapper. */
+function appendStatusLine(wrap, text) {
+    const line  = document.createElement("div");
+    line.className = "status-line";
+    line.innerHTML = `<span class="status-dot"></span><span>${text}</span>`;
+    wrap.appendChild(line);
+    document.getElementById("chatThread").scrollTop = document.getElementById("chatThread").scrollHeight;
+}
+
+/** Appends an inline code output block under an agent message wrapper. */
+function appendCodeBlock(wrap, code, stdout, stderr) {
+    const block = document.createElement("div");
+    block.className = "code-block";
+
+    const label = document.createElement("span");
+    label.className = "code-block-label";
+    label.innerText = "Code Sandbox Output";
+    block.appendChild(label);
+
+    if (code) {
+        const src = document.createElement("pre");
+        src.className = "code-source";
+        src.innerText = code;
+        block.appendChild(src);
+        const hr = document.createElement("hr");
+        hr.className = "code-divider";
+        block.appendChild(hr);
+    }
+
+    if (stdout) {
+        const out = document.createElement("pre");
+        out.className = "code-stdout";
+        out.innerText = stdout;
+        block.appendChild(out);
+    } else if (!stderr) {
+        const empty = document.createElement("span");
+        empty.className = "code-empty";
+        empty.innerText = "(no output)";
+        block.appendChild(empty);
+    }
+
+    if (stderr) {
+        const err = document.createElement("pre");
+        err.className = "code-stderr";
+        err.innerText = stderr;
+        block.appendChild(err);
+    }
+
+    wrap.appendChild(block);
+    document.getElementById("chatThread").scrollTop = document.getElementById("chatThread").scrollHeight;
+}
+
+/**
+ * Appends a clarifying question with an inline reply input.
+ * Replying sends the user's answer as the next chat message.
+ */
+function appendClarifyQuestion(wrap, question) {
+    const box = document.createElement("div");
+    box.className = "clarify-box";
+
+    const label = document.createElement("span");
+    label.className = "clarify-label";
+    label.innerText = "Clarification Required";
+    box.appendChild(label);
+
+    const qText = document.createElement("div");
+    qText.style.cssText = "font-size:0.84rem;color:var(--offwhite);margin-bottom:0.6rem;line-height:1.5;";
+    qText.innerText = question;
+    box.appendChild(qText);
+
+    const row = document.createElement("div");
+    row.className = "clarify-input-row";
+
+    const input = document.createElement("input");
+    input.className   = "clarify-input";
+    input.type        = "text";
+    input.placeholder = "Type your answer...";
+
+    const sendBtn = document.createElement("button");
+    sendBtn.className = "btn-clarify-send";
+    sendBtn.innerText = "Reply";
+
+    const doReply = () => {
+        const val = input.value.trim();
+        if (!val) return;
+        input.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.innerText = "Sent";
+        // Inject into the chat textarea and send
+        document.getElementById("chatInput").value = val;
+        sendMessage();
+    };
+
+    sendBtn.addEventListener("click", doReply);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") doReply(); });
+
+    row.appendChild(input);
+    row.appendChild(sendBtn);
+    box.appendChild(row);
+    wrap.appendChild(box);
+
+    input.focus();
+    document.getElementById("chatThread").scrollTop = document.getElementById("chatThread").scrollHeight;
+}
+
+/** Shows a typing indicator. Returns the wrapper element. */
+function showTypingIndicator() {
+    const thread = document.getElementById("chatThread");
+    const wrap   = document.createElement("div");
+    wrap.className = "chat-message agent";
+    wrap.id        = "typingIndicator";
+    wrap.innerHTML = `<div class="agent-bubble"><div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    </div></div>`;
+    thread.appendChild(wrap);
+    thread.scrollTop = thread.scrollHeight;
+    return wrap;
+}
+
+function removeTypingIndicator() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.remove();
+}
+
+/** Returns a scratch wrapper for status lines before the real agent message arrives. */
+function getTypingEl() {
+    return document.getElementById("typingIndicator") ||
+           document.getElementById("chatThread").lastElementChild;
+}
+
+// ── Draft Panel ───────────────────────────────────────────────────────────────
+function openDraftPanel(draftPayload, previewHtml, revisionCount, draftFile) {
     currentDraftPayload = draftPayload;
-    const reviewPanel = document.getElementById("humanReviewPanel");
-    const previewBox = document.getElementById("draftPreviewBox");
+    currentDraftFile    = draftFile;
 
-    previewBox.innerHTML = `
-        <strong>Document Title:</strong> ${draftPayload.title || "Inspection Approval Note"}<br>
-        <strong>Reference No:</strong> ${draftPayload.ref_number || "REF-2026-001"}<br>
-        <strong>Plant Unit:</strong> ${draftPayload.plant_unit || "Plant Unit"}<br>
-        <strong>Inspection Date:</strong> ${draftPayload.inspection_date || "2026-08-27"}<br><br>
-        <strong>Key Findings:</strong>
-        <ul>${(draftPayload.findings || []).map(f => `<li>${f}</li>`).join("")}</ul><br>
-        <strong>SOP Grounding:</strong> ${draftPayload.sop_reference || "N/A"}<br>
-        <strong>Recommendation:</strong> ${draftPayload.recommendation || "N/A"}<br>
-    `;
+    const panel      = document.getElementById("draftPanel");
+    const container  = document.getElementById("mainContainer");
+    const preview    = document.getElementById("draftPreviewScroll");
+    const revLabel   = document.getElementById("revisionLabel");
+    const dlLink     = document.getElementById("draftDownloadLink");
 
-    reviewPanel.style.display = "block";
-    reviewPanel.scrollIntoView({ behavior: 'smooth' });
+    panel.style.display = "flex";
+    container.classList.add("draft-open");
+
+    revLabel.innerText = revisionCount > 0 ? `Revision ${revisionCount}` : "Initial Draft";
+    preview.innerHTML  = previewHtml;
+
+    if (draftFile) {
+        dlLink.href = `/api/deliverables/${encodeURIComponent(draftFile)}`;
+    }
+
+    preview.scrollTop = 0;
 }
 
-// Approve Current Draft (Human Sign-Off)
-async function approveCurrentDraft() {
+function closeDraftPanel() {
+    document.getElementById("draftPanel").style.display = "none";
+    document.getElementById("mainContainer").classList.remove("draft-open");
+    currentDraftPayload = null;
+    currentDraftFile    = null;
+}
+
+async function approveDraft() {
     if (!currentDraftPayload) return;
 
     const btn = document.getElementById("btnApproveDraft");
-    btn.disabled = true;
-    btn.innerText = "Finalizing Official Document...";
+    btn.disabled  = true;
+    btn.innerText = "Finalizing...";
 
     try {
-        const res = await fetch("/api/approve_draft", {
-            method: "POST",
+        const res  = await fetch("/api/approve_draft", {
+            method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ draft_payload: currentDraftPayload })
+            body:    JSON.stringify({ draft_payload: currentDraftPayload, session_id: SESSION_ID }),
         });
         const data = await res.json();
 
         if (data.status === "success") {
-            appendTraceEntry("system", `<strong>HUMAN SIGN-OFF CONFIRMED:</strong> Official document finalized as '${data.official_filename}'.`);
-            document.getElementById("humanReviewPanel").style.display = "none";
-            currentDraftPayload = null;
-            initDeliverablesList();
+            closeDraftPanel();
+            appendUserBubble("[Human sign-off confirmed]");
+            const { wrap, bubble } = createAgentMessage(
+                `Official document finalized: '${data.official_filename}'. ` +
+                "It is now available in the Official Deliverables panel. " +
+                "The AI never submitted this — your explicit sign-off did."
+            );
+            document.getElementById("lowConfBanner").style.display = "none";
+            loadDeliverables();
         } else {
-            alert(`Approval error: ${data.error}`);
+            btn.disabled  = false;
+            btn.innerText = "Confirm & Finalize (.docx)";
+            appendAgentBubble(`Approval failed: ${data.error || "unknown error"}`);
         }
     } catch (e) {
-        alert(`Approval error: ${e}`);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Confirm & Finalize Official Deliverable (.docx)";
+        btn.disabled  = false;
+        btn.innerText = "Confirm & Finalize (.docx)";
+        appendAgentBubble(`Approval error: ${e}`);
     }
 }
 
-// Agent Task Runner (SSE Stream Reader)
-async function runAgentTask() {
-    const promptInput = document.getElementById("taskPrompt");
-    const promptText = promptInput.value.trim();
+/** Convenience: append a standalone agent bubble (for errors, simple messages). */
+function appendAgentBubble(text) {
+    const { bubble } = createAgentMessage(text);
+    return bubble;
+}
 
-    if (!promptText) {
-        alert("Please enter a task description or query.");
-        return;
-    }
+// ── Main Send / SSE Loop ──────────────────────────────────────────────────────
+async function sendMessage() {
+    const textarea = document.getElementById("chatInput");
+    const text     = textarea.value.trim();
+    if (!text || isAgentRunning) return;
 
-    // Reset warnings and review panels
-    document.getElementById("lowConfidenceBanner").style.display = "none";
-    document.getElementById("humanReviewPanel").style.display = "none";
+    isAgentRunning = true;
+    textarea.value = "";
+    textarea.style.height = "auto";
 
-    const btn = document.getElementById("btnRunTask");
-    btn.disabled = true;
-    btn.innerText = "Agent Executing...";
+    // Disable send button during execution
+    const btn = document.getElementById("btnSend");
+    btn.disabled  = true;
+    btn.innerText = "Working...";
 
-    appendTraceEntry("system", `<strong>NEW TASK SUBMITTED:</strong> "${promptText}"`);
+    appendUserBubble(text);
+
+    // Show typing indicator
+    const typingWrap = showTypingIndicator();
+
+    // The live agent message container (we create it on first real content)
+    let agentWrap   = null;
+    let agentBubble = null;
+    let agentBubbleText = "";
 
     const formData = new FormData();
-    formData.append("user_prompt", promptText);
-    if (uploadedFileName) {
-        formData.append("uploaded_file", uploadedFileName);
+    formData.append("user_message",   text);
+    formData.append("session_id",     SESSION_ID);
+    if (uploadedTaskFile) {
+        formData.append("uploaded_file", uploadedTaskFile);
     }
 
     try {
-        const response = await fetch("/api/execute", {
-            method: "POST",
-            body: formData
-        });
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        const response = await fetch("/api/chat", { method: "POST", body: formData });
+        const reader   = response.body.getReader();
+        const decoder  = new TextDecoder();
+        let buffer     = "";
 
         while (true) {
             const { value, done } = await reader.read();
@@ -277,52 +443,144 @@ async function runAgentTask() {
             buffer = lines.pop();
 
             for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const jsonStr = line.replace("data: ", "").trim();
-                    if (!jsonStr) continue;
-                    
-                    try {
-                        const event = JSON.parse(jsonStr);
-                        handleSseEvent(event);
-                    } catch (err) {
-                        console.error("SSE parse error:", err);
-                    }
-                }
+                if (!line.startsWith("data: ")) continue;
+                const raw = line.slice(6).trim();
+                if (!raw) continue;
+                let event;
+                try   { event = JSON.parse(raw); }
+                catch { continue; }
+
+                handleEvent(event, typingWrap, {
+                    getAgentWrap: () => agentWrap,
+                    setAgentWrap: (w) => { agentWrap = w; },
+                    getAgentBubble: () => agentBubble,
+                    setAgentBubble: (b) => { agentBubble = b; },
+                    getBubbleText: () => agentBubbleText,
+                    setBubbleText: (t) => { agentBubbleText = t; },
+                });
             }
         }
-
     } catch (e) {
-        appendTraceEntry("system", `Execution error: ${e}`);
+        removeTypingIndicator();
+        appendAgentBubble(`Connection error: ${e}`);
     } finally {
-        btn.disabled = false;
-        btn.innerText = "Execute Agent Task";
+        removeTypingIndicator();
+        isAgentRunning  = false;
+        btn.disabled    = false;
+        btn.innerText   = "Send";
+        // Clear task file after each submission
+        clearTaskFile();
     }
 }
 
-function handleSseEvent(event) {
-    if (event.type === "trace") {
-        const d = event.data;
-        if (d.phase === "ROUTER") {
-            appendTraceEntry("router", d.content, { model: d.model_used });
-        } else if (d.phase === "PLAN & REFLECT") {
-            appendTraceEntry("plan", d.plan, { step: d.step, plan: d.plan, reflection: d.reflection });
-        } else if (d.phase === "ACT") {
-            appendTraceEntry("act", "", { step: d.step, tool: d.tool, args: d.arguments });
-        } else if (d.phase === "OBSERVE") {
-            appendTraceEntry("observe", "", { step: d.step, obs: d.observation });
+/**
+ * Routes a single SSE event to the correct rendering function.
+ * Uses a refs object to share mutable agent-message state without globals.
+ */
+function handleEvent(event, typingWrap, refs) {
+    const phase = event.phase;
 
-            // Check for low-confidence extraction flag
-            if (d.observation && d.observation.low_confidence_flag) {
-                document.getElementById("lowConfidenceBanner").style.display = "flex";
-            }
-            // Check for human review requirement from doc_generator
-            if (d.observation && d.observation.requires_human_approval && d.observation.draft_payload) {
-                showHumanReviewPanel(d.observation.draft_payload);
-            }
-        } else if (d.phase === "FINAL ANSWER") {
-            appendTraceEntry("final", d.content);
-        } else if (d.phase === "STUCK_STATE") {
-            appendTraceEntry("system", `<strong>AGENT STUCK:</strong> ${d.content}`);
+    // Helper: ensure we have an agent message container
+    function ensureAgentWrap() {
+        if (!refs.getAgentWrap()) {
+            removeTypingIndicator();
+            const { wrap, bubble } = createAgentMessage("");
+            refs.setAgentWrap(wrap);
+            refs.setAgentBubble(bubble);
         }
+    }
+
+    switch (phase) {
+
+        case "ROUTER":
+            // Show model routing as first status line
+            ensureAgentWrap();
+            appendStatusLine(refs.getAgentWrap(),
+                `Routing to ${event.model_used} (${event.task_type} task)`);
+            break;
+
+        case "STATUS":
+            ensureAgentWrap();
+            appendStatusLine(refs.getAgentWrap(), event.content);
+            break;
+
+        case "PLAN":
+            // Show plan step as a status line (terse)
+            ensureAgentWrap();
+            appendStatusLine(refs.getAgentWrap(), event.plan);
+            break;
+
+        case "ACT":
+            // Tool call is already summarised by the STATUS event; skip to avoid duplication
+            break;
+
+        case "OBSERVE":
+            // Internal; not shown in chat to keep the UI clean
+            break;
+
+        case "CODE_OUTPUT":
+            ensureAgentWrap();
+            appendCodeBlock(refs.getAgentWrap(), event.code, event.stdout, event.stderr);
+            // Show low-confidence banner if the scan result was uncertain
+            if (event.observation && event.observation.low_confidence_flag) {
+                document.getElementById("lowConfBanner").style.display = "flex";
+            }
+            break;
+
+        case "CLARIFYING_QUESTION":
+            ensureAgentWrap();
+            // Render the question as an agent bubble text, then append the inline input
+            if (refs.getAgentBubble() && !refs.getBubbleText()) {
+                refs.getAgentBubble().innerText = event.question;
+                refs.setBubbleText(event.question);
+            }
+            appendClarifyQuestion(refs.getAgentWrap(), event.question);
+            break;
+
+        case "DRAFT_READY": {
+            ensureAgentWrap();
+            const isRevision = event.is_revision;
+            const revCount   = event.revision_count || 0;
+            const msg = isRevision
+                ? `Draft revised (Revision ${revCount}). Review the updated version in the panel.`
+                : "Draft document created. Review it in the panel on the right, then type feedback or click Confirm to finalize.";
+
+            if (refs.getAgentBubble()) {
+                refs.getAgentBubble().innerText = msg;
+                refs.setBubbleText(msg);
+            }
+
+            openDraftPanel(
+                event.draft_payload,
+                event.preview_html,
+                revCount,
+                event.draft_file,
+            );
+            break;
+        }
+
+        case "FINAL_ANSWER":
+            ensureAgentWrap();
+            if (refs.getAgentBubble()) {
+                refs.getAgentBubble().innerText = event.content;
+                refs.setBubbleText(event.content);
+            }
+            break;
+
+        case "STUCK_STATE":
+            ensureAgentWrap();
+            if (refs.getAgentBubble()) {
+                refs.getAgentBubble().innerText = event.content;
+                refs.setBubbleText(event.content);
+            }
+            break;
+
+        case "ERROR":
+            ensureAgentWrap();
+            appendStatusLine(refs.getAgentWrap(), `Error: ${event.content}`);
+            break;
+
+        default:
+            break;
     }
 }

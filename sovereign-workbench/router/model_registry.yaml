@@ -1,5 +1,5 @@
-# Model Registry Configuration for Air-Gapped Sovereign AI Workbench
-# Maps task types to local Ollama endpoints and model parameters
+# Model Registry Configuration for Air-Gapped Karyalaya AI
+# Strictly local Ollama endpoints (http://localhost:11434)
 
 default_endpoint: "http://localhost:11434"
 
