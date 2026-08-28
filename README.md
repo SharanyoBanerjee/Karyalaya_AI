@@ -1,4 +1,4 @@
-# Karyalaya AI (कार्यालय AI)
+# Karyalay AI (कार्यालय AI)
 ### Air-Gapped Autonomous Intelligence for Government, Defence & PSU Operations
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
