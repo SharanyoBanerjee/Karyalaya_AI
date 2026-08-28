@@ -1,6 +1,6 @@
 """
-First-pass OCR Engine for Sovereign AI Workbench.
-Extracts text from scanned documents, drawings, and photos using pytesseract/Pillow.
+First-pass OCR Engine for Karyalaya AI.
+Extracts text from images using Pytesseract / Pillow with confidence scoring. pytesseract/Pillow.
 Computes an OCR confidence score to determine if VLM fallback is needed.
 """
 

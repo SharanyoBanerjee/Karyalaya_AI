@@ -1,4 +1,4 @@
-# Rules — Sovereign AI Workbench
+# Rules — Karyalaya AI
 
 ## Hard constraints (never violate)
 - **No internet calls, ever.** No web search tool, no external API, no telemetry, no auto-update checks, no CDN-hosted assets in the UI. If a library wants to phone home, vendor it locally or drop it.

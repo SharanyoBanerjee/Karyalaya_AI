@@ -1,4 +1,4 @@
-# Phases — Sovereign AI Workbench
+# Phases — Karyalaya AI
 
 ## Phase 1 — Model serving + router skeleton
 - Install Ollama on the M4 MacBook, pull 2 quantized models (Qwen2.5-Coder-7B, Qwen2.5-14B-Instruct).

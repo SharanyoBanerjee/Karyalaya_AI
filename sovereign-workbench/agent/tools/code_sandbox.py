@@ -1,6 +1,6 @@
 """
-Docker Code Sandbox Tool for Sovereign AI Workbench.
-Executes Python code safely inside an isolated container with --network none.
+Docker Code Sandbox Tool for Karyalaya AI.
+Executes Python scripts inside an isolated container with --network none.
 Strictly enforced zero network access.
 """
 

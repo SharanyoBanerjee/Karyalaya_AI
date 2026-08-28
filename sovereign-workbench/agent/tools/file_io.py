@@ -1,5 +1,5 @@
 """
-Workspace File I/O Tool for Sovereign AI Workbench.
+Workspace File I/O Tool for Karyalaya AI.
 Strictly scoped to sovereign-workbench/workspace/ directory.
 Prevents path traversal outside the workspace folder.
 """

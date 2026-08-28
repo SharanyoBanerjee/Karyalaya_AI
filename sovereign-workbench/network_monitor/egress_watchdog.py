@@ -1,6 +1,6 @@
 """
-OS-Level Network Egress Watchdog for Sovereign AI Workbench.
-Monitors OS network sockets (via lsof) and macOS pfctl firewall rules.
+OS-Level Network Egress Watchdog for Karyalaya AI.
+Monitors system network sockets using lsof and checks pfctl firewall status on macOS.
 Provides visual proof of zero outbound non-loopback connections from Workbench services.
 """
 

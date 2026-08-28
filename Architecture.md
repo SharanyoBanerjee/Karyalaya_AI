@@ -1,4 +1,4 @@
-# Architecture — Sovereign AI Workbench
+# Architecture — Karyalaya AI
 
 ## High-level flow
 ```

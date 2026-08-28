@@ -1,4 +1,4 @@
-# PRD — Sovereign AI Workbench (Air-Gapped Agentic AI for Govt/Defence/PSU)
+# PRD — Karyalaya AI (Air-Gapped Agentic AI for Govt/Defence/PSU)
 
 ## Problem
 Refineries, PSUs, and defence manufacturing units generate sensitive routine knowledge work (approval notes, inspection reports, calculations, internal code, drawing review). This data can't touch cloud AI due to confidentiality mandates. Result: staff either do this by hand, or leak data by pasting it into public tools anyway. No deployable on-prem alternative exists today.

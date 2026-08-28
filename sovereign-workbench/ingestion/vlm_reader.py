@@ -1,6 +1,6 @@
 """
-Multimodal Vision Pipeline & OCR Fallback for Sovereign AI Workbench.
-Reads scanned PDFs, handwritten reports, photos, and diagrams using local vision model (qwen2-vl:7b / llava:7b).
+Multimodal Vision Pipeline & OCR Fallback for Karyalaya AI.
+Invokes local vision language model (qwen2-vl:7b) when OCR confidence is low (< 0.75).
 Surfaces low-confidence extraction warnings for UI display.
 """
 

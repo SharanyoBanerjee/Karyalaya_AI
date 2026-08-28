@@ -1,7 +1,6 @@
 """
-Spreadsheet Generator Tool for Sovereign AI Workbench.
-Reads and writes .xlsx Excel files using openpyxl.
-Outputs directly into workspace/deliverables/ folder.
+Spreadsheet Generator Tool for Karyalaya AI.
+Creates formatted and styled .xlsx Excel spreadsheets for inspection tables and data summaries.
 """
 
 import os
