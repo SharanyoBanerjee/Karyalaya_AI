@@ -10,6 +10,7 @@ let isAgentRunning      = false; // Prevent parallel submissions
 
 // ── DOM Ready ────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     initNetworkMonitor();
     initSopUpload();
     initTaskFileUpload();
@@ -37,6 +38,30 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(updateNetworkStatus, 4000);
 });
 
+// ── Theme Switcher ──────────────────────────────────────────────────────────
+function initTheme() {
+    const savedTheme = localStorage.getItem("karyalaya_theme") || "dark";
+    applyTheme(savedTheme);
+
+    const toggleBtn = document.getElementById("themeToggleBtn");
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+            const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            applyTheme(newTheme);
+        });
+    }
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("karyalaya_theme", theme);
+    const label = document.getElementById("themeToggleText");
+    if (label) {
+        label.innerText = theme === "dark" ? "Dark" : "Light";
+    }
+}
+
 // ── Network Monitor ───────────────────────────────────────────────────────────
 async function initNetworkMonitor() { await updateNetworkStatus(); }
 
@@ -47,7 +72,6 @@ async function updateNetworkStatus() {
         const data = await res.json();
 
         const isSecure = data.is_airgapped;
-        const badge    = document.getElementById("netBadgeBox");
         const text     = document.getElementById("netStatusText");
         const count    = document.getElementById("connCountBadge");
         const metric   = document.getElementById("metricConnCount");
@@ -56,8 +80,7 @@ async function updateNetworkStatus() {
         const lastVal  = document.getElementById("lastVerifiedVal");
 
         text.innerText  = isSecure ? "SECURE (AIR-GAPPED)" : "WARNING (EGRESS DETECTED)";
-        text.style.color = isSecure ? "var(--green)" : "#ef4444";
-        badge.style.borderColor = isSecure ? "var(--green)" : "#ef4444";
+        text.style.color = isSecure ? "var(--green-text)" : "var(--red-text)";
         count.innerText = `${data.outbound_connection_count} Outbound`;
         if (metric)  metric.innerText   = data.outbound_connection_count;
         if (fwVal)   fwVal.innerText    = data.firewall_status  || "pfctl Active";
@@ -260,7 +283,7 @@ function appendClarifyQuestion(wrap, question) {
     box.appendChild(label);
 
     const qText = document.createElement("div");
-    qText.style.cssText = "font-size:0.84rem;color:var(--offwhite);margin-bottom:0.6rem;line-height:1.5;";
+    qText.className = "clarify-text";
     qText.innerText = question;
     box.appendChild(qText);
 
